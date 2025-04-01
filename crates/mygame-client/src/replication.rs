@@ -5,10 +5,12 @@ use lightyear::prelude::{
     *,
 };
 use mygame_assets::{CurrentLevel, LevelState};
+use mygame_common::Rendered;
 use mygame_protocol::{
     component::Player,
     message::{ClientLevelLoadComplete, ServerWelcome, UnorderedReliable},
 };
+use mygame_render::camera::CameraTarget;
 
 pub struct ReplicationPlugin;
 
@@ -59,12 +61,19 @@ fn on_server_welcome(
 
 fn await_spawn(
     mut commands: Commands,
-    q_spawned_player: Query<(Entity, &Player), Added<Player>>,
+    q_spawned_player: Query<(Entity, &Player), (Rendered, Added<Player>)>,
     client: Res<ClientConnection>,
 ) {
     for (entity, player) in &q_spawned_player {
         if player.0 == client.id() {
-            commands.entity(entity).insert(LocalPlayer);
+            commands.entity(entity)
+                .insert((
+                    LocalPlayer,
+                    CameraTarget {
+                        follow_distance: 10.0,
+                        smooth_time: 0.25,
+                    }
+                ));
             commands.set_state(GameState::Playing);
         }
     }

@@ -1,4 +1,4 @@
-use avian3d::{PhysicsPlugins, prelude::PhysicsInterpolationPlugin};
+use avian3d::{prelude::{NarrowPhaseConfig, PhysicsInterpolationPlugin}, PhysicsPlugins};
 use bevy::prelude::*;
 use lightyear::prelude::{
     client::{Interpolated, Predicted, VisualInterpolateStatus},
@@ -14,15 +14,20 @@ pub struct CommonPlugin;
 
 impl Plugin for CommonPlugin {
     fn build(&self, app: &mut App) {
-        app.add_plugins((
-            AssetPlugin,
-            ProtocolPlugin,
-            PhysicsPlugins::new(FixedPostUpdate)
-                .build()
-                .disable::<PhysicsInterpolationPlugin>(),
-            level::LevelPlugin,
-            player::PlayerPlugin,
-        ));
+        app
+            .add_plugins((
+                AssetPlugin,
+                ProtocolPlugin,
+                PhysicsPlugins::new(FixedPostUpdate)
+                    .build()
+                    .disable::<PhysicsInterpolationPlugin>(),
+                level::LevelPlugin,
+                player::PlayerPlugin,
+            ))
+            .insert_resource(NarrowPhaseConfig {
+                contact_tolerance: 0.1,
+                ..default()
+            });
     }
 }
 

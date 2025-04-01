@@ -11,8 +11,10 @@ use lightyear::{
 use mygame_common::CommonPlugin;
 use mygame_render::RenderPlugin;
 
+use crate::crosshair::CrosshairPlugin;
 use crate::game_state::{GameLifecyclePlugin, GameState};
 use crate::input::InputPlugin;
+use crate::throwaway::ThrowawayPlugin;
 use crate::{
     interpolation::InterpolationPlugin, network::NetworkPlugin, replication::ReplicationPlugin,
     ui::UiPlugin,
@@ -57,6 +59,8 @@ fn build_core_client_app(
         ReplicationPlugin,
         InputPlugin,
         InterpolationPlugin,
+        CrosshairPlugin,
+        ThrowawayPlugin
     ));
 
     app.insert_resource(AssetPath(asset_path));

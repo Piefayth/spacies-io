@@ -69,7 +69,7 @@ fn on_level_change(
     // and despawn everything from the loaded level
 
     global_assets.character =
-        asset_server.load(GltfAssetLabel::Scene(0).from_asset("scenes/example_character.glb"));
+        asset_server.load(GltfAssetLabel::Scene(0).from_asset("scenes/craft_speederB.glb"));
 
     match **current_level {
         Level::Example => {
@@ -112,7 +112,8 @@ fn postprocess_assets(
     mut commands: Commands,
     current_level: Res<CurrentLevel>,
     mut scenes: ResMut<Assets<Scene>>,
-    level_assets: ResMut<LevelAssets>,
+    level_assets: Res<LevelAssets>,
+    global_assets: Res<GlobalAssets>,
     meshes: Res<Assets<Mesh>>,
 ) {
     match **current_level {
@@ -141,6 +142,6 @@ fn postprocess_assets(
         }
         Level::Void => (),
     }
-
+    
     commands.set_state(LevelState::Loaded);
 }

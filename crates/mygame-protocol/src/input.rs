@@ -5,7 +5,7 @@ use lightyear::prelude::*;
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone, Copy, Hash, Reflect, Actionlike)]
 pub enum NetworkedInput {
     #[actionlike(DualAxis)]
-    Move,
+    Aim,
 }
 
 pub fn register_input(app: &mut App) {
