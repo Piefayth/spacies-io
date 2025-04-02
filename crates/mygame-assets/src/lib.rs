@@ -173,9 +173,10 @@ fn postprocess_render_assets(
             scene.world.entity_mut(material_having_entity).remove::<MeshMaterial3d<StandardMaterial>>();
             scene.world.entity_mut(material_having_entity).insert(MeshMaterial3d(gradient_materials.add(GradientMaterial {
                 axis: 2,
-                start_color: GREEN.into(),
-                end_color: RED.into(),
-                extent: 0.4,
+                start_color: LinearRgba::new(0.0, 1.2, 0.0, 1.0),
+                end_color: WHITE.into(),
+                start: -0.5,
+                end: 1.0,
             })));
         }
     }

@@ -8,7 +8,9 @@ var<uniform> start_color: vec4<f32>;
 @group(2) @binding(2)
 var<uniform> end_color: vec4<f32>;
 @group(2) @binding(3)
-var<uniform> extent: f32;
+var<uniform> start: f32;
+@group(2) @binding(4)
+var<uniform> end: f32;
 
 struct VertexOutput {
     @builtin(position) position: vec4<f32>,
@@ -40,9 +42,9 @@ fn fragment(in: VertexOutput) -> @location(0) vec4<f32> {
         position_on_axis = in.model_position.z;
     }
    
-    // Normalize based on the extent parameter
-    // This will center the gradient at the origin and scale it by extent
-    let normalized_pos = clamp(position_on_axis / extent * 0.5 + 0.5, 0.0, 1.0);
+    // Normalize position between start and end values
+    let range = end - start;
+    let normalized_pos = clamp((position_on_axis - start) / range, 0.0, 1.0);
    
     // Create gradient by interpolating between colors
     let final_color = mix(start_color.rgb, end_color.rgb, normalized_pos);

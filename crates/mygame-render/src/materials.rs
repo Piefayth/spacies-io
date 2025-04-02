@@ -23,7 +23,10 @@ pub struct GradientMaterial {
     pub end_color: LinearRgba,
 
     #[uniform(3)]
-    pub extent: f32,
+    pub start: f32,
+    
+    #[uniform(4)]
+    pub end: f32,
 }
 
 impl Material for GradientMaterial {
