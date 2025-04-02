@@ -15,7 +15,7 @@ use crate::app::{AssetPath, LaunchConfigurations};
 use crate::game_state::GameState;
 use mygame_server::app::{ServerMode, build_server_app};
 
-pub struct HostPlugin;
+pub (crate) struct HostPlugin;
 
 impl Plugin for HostPlugin {
     fn build(&self, app: &mut App) {

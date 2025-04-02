@@ -51,11 +51,11 @@ fn build_core_client_app(
         ClientPlugins {
             config: client_remote_config.clone(),
         },
+        RenderPlugin,
         CommonPlugin,
         GameLifecyclePlugin,
         UiPlugin,
         NetworkPlugin,
-        RenderPlugin,
         ReplicationPlugin,
         InputPlugin,
         InterpolationPlugin,

@@ -20,7 +20,7 @@ pub enum GameState {
     Playing,          // Player exists and we can give control to the client
 }
 
-pub struct GameLifecyclePlugin;
+pub (crate) struct GameLifecyclePlugin;
 
 impl Plugin for GameLifecyclePlugin {
     fn build(&self, app: &mut App) {

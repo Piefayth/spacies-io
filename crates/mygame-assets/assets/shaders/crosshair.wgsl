@@ -1,20 +1,27 @@
-#import bevy_sprite::mesh2d_vertex_output::VertexOutput
+#import bevy_pbr::forward_io::VertexOutput
 
 @group(2) @binding(0)
 var<uniform> color: vec4<f32>;
 
 @fragment
 fn fragment(in: VertexOutput) -> @location(0) vec4<f32> {
+    // Normalize UVs to [-1, 1] range
     let uv = in.uv * 2.0 - 1.0;
-    let center_dist = length(uv);
     
-    let glow = 1.0 - smoothstep(0.4, 0.5, center_dist);
+    // Calculate distance from edges for a crisp 1px outline
+    let edge_thickness = 0.05;
     
-    let crosshair_x = smoothstep(0.05, 0.0, abs(uv.x));
-    let crosshair_y = smoothstep(0.05, 0.0, abs(uv.y));
-    let crosshair = max(crosshair_x, crosshair_y);
+    // Create sharp edge mask for x and y edges
+    let x_dist = abs(abs(uv.x) - 1.0);
+    let y_dist = abs(abs(uv.y) - 1.0);
     
-    let alpha = max(glow * 0.5, crosshair);
+    // Use step for crisp edges
+    let x_edge = step(x_dist, edge_thickness);
+    let y_edge = step(y_dist, edge_thickness);
     
-    return vec4<f32>(color.rgb, alpha * color.a);
+    // Combine edges using max
+    let edge_mask = max(x_edge, y_edge);
+    
+    // Multiply color by edge mask
+    return color * edge_mask;
 }

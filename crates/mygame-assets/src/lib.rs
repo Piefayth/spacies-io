@@ -1,11 +1,10 @@
 use assets::{GlobalAssets, LevelAssets};
 use avian3d::prelude::{Collider, ColliderConstructor, RigidBody};
 use bevy::{
-    asset::{AssetPlugin as BevyAssetPlugin, LoadState},
-    gltf::{GltfMesh, GltfPlugin},
-    prelude::*,
+    asset::{AssetPlugin as BevyAssetPlugin, LoadState}, color::palettes::css::{GREEN, RED, WHITE}, gltf::{GltfMesh, GltfPlugin}, prelude::*, render::RenderApp
 };
 use mygame_protocol::message::Level;
+use mygame_render::{materials::GradientMaterial, RenderPlugin};
 
 pub mod assets;
 
@@ -13,7 +12,8 @@ pub struct AssetPlugin;
 
 impl Plugin for AssetPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(Update, on_level_change)
+        app
+            .add_systems(Update, on_level_change)
             .add_systems(
                 Update,
                 check_asset_loading.run_if(in_state(LevelState::Loading)),
@@ -25,6 +25,10 @@ impl Plugin for AssetPlugin {
             .init_resource::<LevelAssets>()
             .init_resource::<GlobalAssets>()
             .register_type::<Geometry>();
+
+        if app.is_plugin_added::<RenderPlugin>() {
+            app.add_systems(OnEnter(LevelState::Postprocess), postprocess_render_assets);
+        }
     }
 }
 
@@ -70,7 +74,11 @@ fn on_level_change(
 
     global_assets.character =
         asset_server.load(GltfAssetLabel::Scene(0).from_asset("scenes/craft_speederB.glb"));
-
+    global_assets.laser =
+        asset_server.load(GltfAssetLabel::Scene(0).from_asset("scenes/weapon-ammo-arrow.glb"));
+    global_assets.target =
+        asset_server.load(GltfAssetLabel::Scene(0).from_asset("scenes/target-large.glb"));
+        
     match **current_level {
         Level::Example => {
             level_assets.example_level = asset_server
@@ -105,9 +113,6 @@ fn check_asset_loading(
     }
 }
 
-/// Just adds colliders, but other postprocessing on the Scene could be done here
-/// In the future, when Avian3d's Collision component is #[reflect], it would be nice
-///  to actually construct the colliders here, rather than defer them with ColliderConstructor
 fn postprocess_assets(
     mut commands: Commands,
     current_level: Res<CurrentLevel>,
@@ -116,6 +121,9 @@ fn postprocess_assets(
     global_assets: Res<GlobalAssets>,
     meshes: Res<Assets<Mesh>>,
 ) {
+    // "Generate" colliders for the level
+    // In the future, when Avian3d's Collision component is #[reflect], it would be nice
+    //  to actually construct the colliders here, rather than defer them with ColliderConstructor
     match **current_level {
         Level::Example => {
             // After the GLTF finishes loading, it's now a bevy Scene
@@ -142,6 +150,33 @@ fn postprocess_assets(
         }
         Level::Void => (),
     }
-    
+
     commands.set_state(LevelState::Loaded);
+}
+
+fn postprocess_render_assets(
+    mut scenes: ResMut<Assets<Scene>>,
+    global_assets: Res<GlobalAssets>,
+    mut gradient_materials: ResMut<Assets<GradientMaterial>>,
+) {
+    // Swap out the material on the "laser"
+    if let Some(scene) = scenes.get_mut(&global_assets.laser) {
+        let mut material_having_entity = Entity::PLACEHOLDER;
+
+        for entity_ref in scene.world.iter_entities() {
+            if let Some(_) = scene.world.get::<MeshMaterial3d<StandardMaterial>>(entity_ref.id()) {
+                material_having_entity = entity_ref.id();
+            }
+        }
+
+        if material_having_entity != Entity::PLACEHOLDER {
+            scene.world.entity_mut(material_having_entity).remove::<MeshMaterial3d<StandardMaterial>>();
+            scene.world.entity_mut(material_having_entity).insert(MeshMaterial3d(gradient_materials.add(GradientMaterial {
+                axis: 2,
+                start_color: GREEN.into(),
+                end_color: RED.into(),
+                extent: 0.4,
+            })));
+        }
+    }
 }

@@ -7,7 +7,7 @@ use lightyear::{
 use crate::app::LaunchConfigurations;
 use crate::game_state::GameState;
 
-pub struct NetworkPlugin;
+pub (crate) struct NetworkPlugin;
 
 impl Plugin for NetworkPlugin {
     fn build(&self, app: &mut App) {

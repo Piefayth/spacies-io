@@ -12,7 +12,7 @@ use mygame_protocol::{
 };
 use mygame_render::camera::CameraTarget;
 
-pub struct ReplicationPlugin;
+pub (crate) struct ReplicationPlugin;
 
 impl Plugin for ReplicationPlugin {
     fn build(&self, app: &mut App) {
@@ -70,8 +70,8 @@ fn await_spawn(
                 .insert((
                     LocalPlayer,
                     CameraTarget {
-                        follow_distance: 10.0,
-                        smooth_time: 0.25,
+                        follow_distance: 6.0,
+                        smooth_time: 0.15,
                     }
                 ));
             commands.set_state(GameState::Playing);

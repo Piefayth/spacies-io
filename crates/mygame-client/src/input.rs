@@ -1,6 +1,5 @@
 use bevy::{
-    ecs::system::{StaticSystemParam, lifetimeless::SRes},
-    prelude::*,
+    ecs::system::{lifetimeless::SRes, StaticSystemParam}, input::mouse::MouseMotion, prelude::*
 };
 use leafwing_input_manager::{
     clashing_inputs::BasicInputs, plugin::InputManagerPlugin, prelude::{
@@ -48,9 +47,11 @@ fn add_input_maps(
     for player in &q_local_player {
         commands.entity(player).insert((
             InputMap::<LocalInput>::default().with(LocalInput::SystemMenuOrCancel, KeyCode::Escape),
+            ActionState::<LocalInput>::default(),
             InputMap::<NetworkedInput>::default()
                 .with_dual_axis(NetworkedInput::Aim, AimInput)
-                .with_dual_axis(NetworkedInput::Aim, GamepadStick::LEFT),
+                .with_dual_axis(NetworkedInput::Aim, GamepadStick::LEFT)
+                .with(NetworkedInput::Fire, MouseButton::Left),
         ));
     }
 }
@@ -103,14 +104,30 @@ impl DualAxislike for AimInput {
     }
 }
 
-fn update_aim_direction(mut aim_direction: ResMut<AimDirection>, windows: Query<&Window>) {
-    let window = windows.single();
-
-    if let Some(cursor_position) = window.cursor_position() {
-        // Normalize cursor position to -1 to 1 range
-        let normalized_x = (cursor_position.x / window.width()) * 2.0 - 1.0;
-        let normalized_y = (cursor_position.y / window.height()) * 2.0 - 1.0;
-
-        aim_direction.direction = Vec2::new(normalized_x, -normalized_y);
+fn update_aim_direction(
+    mut aim_direction: ResMut<AimDirection>,
+    mut mouse_motion_events: EventReader<MouseMotion>,
+    time: Res<Time>,
+) {
+    // Get cumulative motion this frame
+    let mut delta = Vec2::ZERO;
+    for event in mouse_motion_events.read() {
+        delta += event.delta;
+    }
+    
+    // Apply sensitivity and update direction
+    let sensitivity = 0.001; // Adjust this value to your liking
+    
+    if delta != Vec2::ZERO {
+        // Update the aim direction based on mouse movement
+        // You might want to clamp these values to keep them in a certain range
+        aim_direction.direction.x += delta.x * sensitivity;
+        aim_direction.direction.y -= delta.y * sensitivity; // Invert Y for typical FPS controls
+        
+        // Optional: Normalize or clamp the direction vector
+        // aim_direction.direction = aim_direction.direction.normalize();
+        // or
+        aim_direction.direction.x = aim_direction.direction.x.clamp(-1.0, 1.0);
+        aim_direction.direction.y = aim_direction.direction.y.clamp(-1.0, 1.0);
     }
 }

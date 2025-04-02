@@ -3675,6 +3675,7 @@ dependencies = [
  "bevy",
  "lightyear",
  "mygame-protocol",
+ "mygame-render",
 ]
 
 [[package]]
@@ -3705,6 +3706,7 @@ dependencies = [
  "lightyear",
  "mygame-assets",
  "mygame-protocol",
+ "seahash",
  "serde",
 ]
 

@@ -59,6 +59,8 @@ leafwing-input-manager = {git = "https://github.com/Leafwing-Studios/leafwing-in
   "mouse",
 ]}
 
+seahash = "4.1.0"
+
 [profile.dev]
 opt-level = 1
 

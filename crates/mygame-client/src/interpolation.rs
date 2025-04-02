@@ -13,7 +13,7 @@ use lightyear::{
     },
 };
 
-pub struct InterpolationPlugin;
+pub (crate) struct InterpolationPlugin;
 impl Plugin for InterpolationPlugin {
     fn build(&self, app: &mut App) {
         app.add_plugins(VisualInterpolationPlugin::<Transform>::default());

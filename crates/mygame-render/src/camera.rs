@@ -2,7 +2,7 @@ use avian3d::prelude::{LinearVelocity, Position};
 use bevy::{math::VectorSpace, prelude::*};
 use lightyear::prelude::client::InterpolationSet;
 
-pub struct CameraPlugin;
+pub (crate) struct CameraPlugin;
 
 impl Plugin for CameraPlugin {
     fn build(&self, app: &mut App) {

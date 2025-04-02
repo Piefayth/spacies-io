@@ -4,6 +4,8 @@ use bevy::prelude::*;
 #[derive(Resource, Default)]
 pub struct GlobalAssets {
     pub character: Handle<Scene>,
+    pub laser: Handle<Scene>,
+    pub target: Handle<Scene>,
 }
 
 #[derive(Resource, Default)]

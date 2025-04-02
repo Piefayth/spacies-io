@@ -11,8 +11,16 @@ use lightyear::{
 #[derive(Component, Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct Player(pub ClientId);
 
+
+#[derive(Component, Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct Projectile;
+
 pub fn register_components(app: &mut App) {
     app.register_component::<Player>(ChannelDirection::ServerToClient)
+        .add_prediction(ComponentSyncMode::Once)
+        .add_interpolation(ComponentSyncMode::Once);
+
+    app.register_component::<Projectile>(ChannelDirection::ServerToClient)
         .add_prediction(ComponentSyncMode::Once)
         .add_interpolation(ComponentSyncMode::Once);
 
