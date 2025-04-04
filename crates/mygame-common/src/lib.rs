@@ -1,14 +1,13 @@
-use avian3d::{prelude::{NarrowPhaseConfig, PhysicsInterpolationPlugin}, PhysicsPlugins};
+use avian3d::{prelude::{NarrowPhaseConfig, PhysicsInterpolationPlugin}, sync::SyncConfig, PhysicsPlugins};
 use bevy::prelude::*;
 use lightyear::prelude::{
-    client::{Interpolated, Predicted, VisualInterpolateStatus},
-    server::ReplicationTarget, ReplicationGroup,
+    client::{Interpolated, Predicted, VisualInterpolateStatus}, server::ReplicationTarget, PreSpawnedPlayerObject, ReplicationGroup
 };
 use mygame_assets::AssetPlugin;
 use mygame_protocol::ProtocolPlugin;
 
 pub mod level;
-pub mod player;
+pub mod ship;
 
 pub struct CommonPlugin;
 
@@ -22,18 +21,24 @@ impl Plugin for CommonPlugin {
                     .build()
                     .disable::<PhysicsInterpolationPlugin>(),
                 level::LevelPlugin,
-                player::PlayerPlugin,
+                ship::ShipPlugin,
             ))
             .insert_resource(NarrowPhaseConfig {
                 contact_tolerance: 0.1,
+                ..default()
+            })
+            .insert_resource(SyncConfig {
+                transform_to_position: false,
+                position_to_transform: true,
                 ..default()
             });
     }
 }
 
-pub type Simulated = Or<(With<Predicted>, With<ReplicationTarget>)>;
+pub type Simulated = Or<(With<Predicted>, With<ReplicationTarget>, With<PreSpawnedPlayerObject>)>;
 pub type Rendered = Or<(Simulated, With<Interpolated>)>;
 
 
 pub const REPLICATION_GROUP_PREDICTED: ReplicationGroup = ReplicationGroup::new_id(42);
-pub const PRE_SPAWNED_PROJECTILE: u64 = 23895723;
+pub const LEFT_PROJECTILE_ID: u64 = 23895723;
+pub const RIGHT_PROJECTILE_ID: u64 = 105715186;

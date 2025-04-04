@@ -8,7 +8,7 @@ use lightyear::prelude::{
 use mygame_assets::CurrentLevel;
 use mygame_common::REPLICATION_GROUP_PREDICTED;
 use mygame_protocol::{
-    component::Player,
+    component::{Player, Ship},
     message::{ClientLevelLoadComplete, Level, ServerWelcome, UnorderedReliable},
 };
 
@@ -36,6 +36,7 @@ fn on_client_load_complete(
                 player_start_position,
                 Rotation::default(),
                 Player(ev.from),
+                Ship,
                 ServerReplicate {
                     group: REPLICATION_GROUP_PREDICTED,
                     controlled_by: ControlledBy {

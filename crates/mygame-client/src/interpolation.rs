@@ -12,6 +12,7 @@ use lightyear::{
         VisualInterpolateStatus, VisualInterpolationPlugin,
     },
 };
+use mygame_protocol::component::Projectile;
 
 pub (crate) struct InterpolationPlugin;
 impl Plugin for InterpolationPlugin {

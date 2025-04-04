@@ -68,6 +68,7 @@ struct CrosshairFar;
 
 const CROSSHAIR_NEAR_DISTANCE: f32 = 20.0;
 const CROSSHAIR_FAR_DISTANCE: f32 = 50.0;
+const CROSSHAIR_VERTICAL_OFFSET: f32 = -0.5;
 
 fn spawn_crosshair_meshes(
     mut commands: Commands,
@@ -78,7 +79,6 @@ fn spawn_crosshair_meshes(
     let near_plane = meshes.add(Plane3d::new(Vec3::Z, Vec2::new(1.0, 1.0)));
     let far_plane = meshes.add(Plane3d::new(Vec3::Z, Vec2::new(1.5, 1.5)));
     
-
     for (player_entity, player_transform) in &q_added_local_player {
         commands.entity(player_entity)
             .with_children(|child_builder| {
@@ -94,14 +94,14 @@ fn spawn_crosshair_meshes(
                     Mesh3d(near_plane.clone()),
                     MeshMaterial3d(near_crosshair_material),
                     CrosshairNear,
-                    Transform::from_translation(player_transform.forward() * CROSSHAIR_NEAR_DISTANCE)
+                    Transform::from_translation(player_transform.forward() * CROSSHAIR_NEAR_DISTANCE + player_transform.up() * CROSSHAIR_VERTICAL_OFFSET)
                 ));
 
                 child_builder.spawn((
                     Mesh3d(far_plane.clone()),
                     MeshMaterial3d(far_crosshair_material),
                     CrosshairFar,
-                    Transform::from_translation(player_transform.forward() * CROSSHAIR_FAR_DISTANCE)
+                    Transform::from_translation(player_transform.forward() * CROSSHAIR_FAR_DISTANCE  + player_transform.up() * CROSSHAIR_VERTICAL_OFFSET)
                 ));
             });
     }

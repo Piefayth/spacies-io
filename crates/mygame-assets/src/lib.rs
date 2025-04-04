@@ -74,8 +74,10 @@ fn on_level_change(
 
     global_assets.character =
         asset_server.load(GltfAssetLabel::Scene(0).from_asset("scenes/craft_speederB.glb"));
+    global_assets.bot =
+        asset_server.load(GltfAssetLabel::Scene(0).from_asset("scenes/craft_speederC.glb"));
     global_assets.laser =
-        asset_server.load(GltfAssetLabel::Scene(0).from_asset("scenes/weapon-ammo-arrow.glb"));
+        asset_server.load(GltfAssetLabel::Scene(0).from_asset("scenes/weapon-ammo-arrow-scaled.glb"));
     global_assets.target =
         asset_server.load(GltfAssetLabel::Scene(0).from_asset("scenes/target-large.glb"));
         

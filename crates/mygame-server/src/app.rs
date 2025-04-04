@@ -19,6 +19,7 @@ use bevy::{
     state::app::StatesPlugin,
     window::ExitCondition,
 };
+use bevy_rand::{plugin::EntropyPlugin, prelude::WyRand};
 use lightyear::{
     prelude::*,
     server::{config::ServerConfig, plugin::ServerPlugins},
@@ -26,7 +27,7 @@ use lightyear::{
 use mygame_common::CommonPlugin;
 use mygame_render::RenderPlugin;
 
-use crate::{network::NetworkPlugin, replication::ReplicationPlugin};
+use crate::{bots::BotsPlugin, network::NetworkPlugin, replication::ReplicationPlugin};
 
 #[derive(Resource, PartialEq, Eq)]
 pub enum ServerMode {
@@ -89,7 +90,13 @@ pub fn build_server_app(server_config: ServerConfig, asset_path: String, mode: S
     app.add_plugins(ServerPlugins {
         config: server_config,
     })
-    .add_plugins((CommonPlugin, NetworkPlugin, ReplicationPlugin))
+    .add_plugins((
+        CommonPlugin,
+        NetworkPlugin,
+        ReplicationPlugin,
+        BotsPlugin,
+        EntropyPlugin::<WyRand>::default(),
+    ))
     .insert_resource(mode);
 
     app

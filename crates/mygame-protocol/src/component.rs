@@ -11,12 +11,25 @@ use lightyear::{
 #[derive(Component, Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct Player(pub ClientId);
 
+#[derive(Component, Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct Bot(pub u64);
 
 #[derive(Component, Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct Projectile;
 
+#[derive(Component, Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct Ship;
+
 pub fn register_components(app: &mut App) {
     app.register_component::<Player>(ChannelDirection::ServerToClient)
+        .add_prediction(ComponentSyncMode::Once)
+        .add_interpolation(ComponentSyncMode::Once);
+
+    app.register_component::<Bot>(ChannelDirection::ServerToClient)
+        .add_prediction(ComponentSyncMode::Once)
+        .add_interpolation(ComponentSyncMode::Once);
+    
+    app.register_component::<Ship>(ChannelDirection::ServerToClient)
         .add_prediction(ComponentSyncMode::Once)
         .add_interpolation(ComponentSyncMode::Once);
 

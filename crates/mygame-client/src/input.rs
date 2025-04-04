@@ -51,7 +51,7 @@ fn add_input_maps(
             InputMap::<NetworkedInput>::default()
                 .with_dual_axis(NetworkedInput::Aim, AimInput)
                 .with_dual_axis(NetworkedInput::Aim, GamepadStick::LEFT)
-                .with(NetworkedInput::Fire, MouseButton::Left),
+                .with(NetworkedInput::Fire, MouseButton::Right),
         ));
     }
 }
