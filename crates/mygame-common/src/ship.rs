@@ -42,7 +42,7 @@ impl Plugin for ShipPlugin {
                 .after(RunFixedMainLoopSystem::AfterFixedMainLoop),
         );
 
-        app.add_systems(FixedUpdate, (/*move_ship,*/ (fire, add_projectile_gameplay_components, move_projectiles).chain(), despawn_after_lifetime));
+        app.add_systems(FixedUpdate, (/*move_ship,*/ (fire, add_projectile_gameplay_components, debug_projectiles).chain(), despawn_after_lifetime));
     }
 }
 
@@ -254,7 +254,7 @@ fn fire(
     }
 }
 
-fn move_projectiles(
+fn debug_projectiles(
     mut q_projectile: Query<(&mut Position, &LinearVelocity, Option<&PreSpawnedPlayerObject>), (With<Projectile>, Or<(With<Predicted>, With<PreSpawnedPlayerObject>)>)>,
     time: Res<Time<Fixed>>,
     tick_manager: Res<TickManager>,
@@ -269,8 +269,6 @@ fn move_projectiles(
     };
 
     for (mut position, velocity, maybe_prespawn) in q_projectile.iter_mut() {
-        //position.0 += velocity.0 * time.delta_secs();
-
         if network_identity.is_client() {
             if is_rollback {
                 println!("      Rollback Tick ({}) projectile pos: {}, is prespawn: {}", tick.0, position.0, maybe_prespawn.is_some());
