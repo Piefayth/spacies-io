@@ -1,5 +1,5 @@
 use avian3d::prelude::{LinearVelocity, Position};
-use bevy::{math::VectorSpace, prelude::*};
+use bevy::{math::VectorSpace, prelude::*, render::view::RenderLayers};
 use lightyear::prelude::client::InterpolationSet;
 
 pub (crate) struct CameraPlugin;
@@ -11,7 +11,8 @@ impl Plugin for CameraPlugin {
                 .spawn(Camera3d::default())
                 .insert(Transform::from_xyz(-50.0, 50.0, 50.0).looking_at(Vec3::ZERO, Vec3::Y))
                 .insert(MainCamera)
-                .insert(CameraVelocity::default());
+                .insert(CameraVelocity::default())
+                .insert(RenderLayers::layer(0));
         })
         .add_systems(PostUpdate, follow_camera_target.after(InterpolationSet::VisualInterpolation).before(TransformSystem::TransformPropagate));
     }
@@ -121,6 +122,8 @@ fn follow_camera_target(
         time.delta_secs()
     );
     
+    camera_transform.translation = desired_position;
+
     // Create desired rotation (looking at the ship)
     let desired_rotation = Transform::from_translation(camera_transform.translation)
         .looking_at(target_transform.translation, Vec3::Y)
@@ -134,4 +137,6 @@ fn follow_camera_target(
         target.smooth_time * 0.5, // Make rotation smoother than position
         time.delta_secs()
     );
+
+    camera_transform.rotation = desired_rotation;
 }

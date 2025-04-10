@@ -1,4 +1,4 @@
-use avian3d::{prelude::{NarrowPhaseConfig, PhysicsInterpolationPlugin}, sync::SyncConfig, PhysicsPlugins};
+use avian3d::{prelude::{NarrowPhaseConfig, PhysicsInterpolationPlugin, PhysicsLayer}, sync::SyncConfig, PhysicsPlugins};
 use bevy::prelude::*;
 use lightyear::prelude::{
     client::{Interpolated, Predicted, VisualInterpolateStatus}, server::ReplicationTarget, PreSpawnedPlayerObject, ReplicationGroup
@@ -38,6 +38,14 @@ impl Plugin for CommonPlugin {
 pub type Simulated = Or<(With<Predicted>, With<ReplicationTarget>, With<PreSpawnedPlayerObject>)>;
 pub type Rendered = Or<(Simulated, With<Interpolated>)>;
 
+#[derive(PhysicsLayer, Default)]
+pub enum CollisionMask {
+    #[default]
+    Nothing,
+    Ship,
+    Environment,
+    Projectile
+}
 
 pub const REPLICATION_GROUP_PREDICTED: ReplicationGroup = ReplicationGroup::new_id(42);
 pub const LEFT_PROJECTILE_ID: u64 = 23895723;

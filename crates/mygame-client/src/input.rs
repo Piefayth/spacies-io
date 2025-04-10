@@ -2,10 +2,11 @@ use bevy::{
     ecs::system::{lifetimeless::SRes, StaticSystemParam}, input::mouse::MouseMotion, prelude::*
 };
 use leafwing_input_manager::{
-    clashing_inputs::BasicInputs, plugin::InputManagerPlugin, prelude::{
-        updating::{CentralInputStore, InputRegistration, UpdatableInput}, ActionState, DualAxislike, GamepadStick, InputMap, MouseMove, UserInput
+    clashing_inputs::BasicInputs, plugin::{InputManagerPlugin, InputManagerSystem}, prelude::{
+        updating::{CentralInputStore, InputRegistration, UpdatableInput}, ActionState, DualAxislike, GamepadStick, InputMap, MouseMove, UserInput, WithDualAxisProcessingPipelineExt
     }, Actionlike, InputControlKind
 };
+use lightyear::prelude::TickManager;
 use mygame_common::Simulated;
 use mygame_protocol::input::NetworkedInput;
 use serde::{Deserialize, Serialize};
@@ -21,9 +22,9 @@ impl Plugin for InputPlugin {
                 (
                     add_input_maps,
                     handle_system_menu_or_cancel.run_if(in_state(GameState::Playing)),
-                    update_aim_direction,
                 ),
             )
+            .add_systems(PreUpdate, update_aim_direction.in_set(InputManagerSystem::Update))
             .init_resource::<AimDirection>()
             .register_input_kind::<AimInput>(InputControlKind::DualAxis);
     }
@@ -35,11 +36,6 @@ pub enum LocalInput {
     SystemMenuOrCancel,
 }
 
-#[derive(Resource, Default)]
-pub struct AimDirection {
-    pub direction: Vec2,
-}
-
 fn add_input_maps(
     mut commands: Commands,
     q_local_player: Query<Entity, (Simulated, Added<LocalPlayer>)>,
@@ -49,8 +45,8 @@ fn add_input_maps(
             InputMap::<LocalInput>::default().with(LocalInput::SystemMenuOrCancel, KeyCode::Escape),
             ActionState::<LocalInput>::default(),
             InputMap::<NetworkedInput>::default()
+                //.with_dual_axis(NetworkedInput::Aim, MouseMove::default().sensitivity(0.05).inverted_y())
                 .with_dual_axis(NetworkedInput::Aim, AimInput)
-                .with_dual_axis(NetworkedInput::Aim, GamepadStick::LEFT)
                 .with(NetworkedInput::Fire, MouseButton::Right),
         ));
     }
@@ -60,9 +56,16 @@ fn handle_system_menu_or_cancel(
     q_local_inputs: Query<&ActionState<LocalInput>>,
     system_menu_state: Res<State<SystemMenuState>>,
     mut next_system_menu_state: ResMut<NextState<SystemMenuState>>,
+    mut waiting_release: Local<bool>,
 ) {
     for local_input in &q_local_inputs {
-        if local_input.just_pressed(&LocalInput::SystemMenuOrCancel) {
+        // hacking around `just_pressed` not working. why doesn't just_pressed work?
+        if local_input.released(&LocalInput::SystemMenuOrCancel) {
+            *waiting_release = false;
+        }
+
+        if local_input.pressed(&LocalInput::SystemMenuOrCancel) && !*waiting_release {
+            *waiting_release = true;
             match **system_menu_state {
                 SystemMenuState::Open => next_system_menu_state.set(SystemMenuState::Closed),
                 SystemMenuState::Closed => next_system_menu_state.set(SystemMenuState::Open),
@@ -73,6 +76,11 @@ fn handle_system_menu_or_cancel(
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Reflect, Serialize, Deserialize)]
 pub struct AimInput;
+
+#[derive(Resource, Default)]
+pub struct AimDirection {
+    pub direction: Vec2,
+}
 
 impl UserInput for AimInput {
     fn kind(&self) -> InputControlKind {

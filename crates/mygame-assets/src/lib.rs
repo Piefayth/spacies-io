@@ -7,6 +7,7 @@ use mygame_protocol::message::Level;
 use mygame_render::{materials::GradientMaterial, RenderPlugin};
 
 pub mod assets;
+mod effects;
 
 pub struct AssetPlugin;
 
@@ -26,8 +27,13 @@ impl Plugin for AssetPlugin {
             .init_resource::<GlobalAssets>()
             .register_type::<Geometry>();
 
+        // certain assets and asset processing steps require that rendering is enabled
         if app.is_plugin_added::<RenderPlugin>() {
-            app.add_systems(OnEnter(LevelState::Postprocess), postprocess_render_assets);
+            app.add_systems(OnEnter(LevelState::Postprocess), (
+                postprocess_render_assets,
+                effects::register_fx,
+            ));
+
         }
     }
 }
@@ -152,7 +158,7 @@ fn postprocess_assets(
         }
         Level::Void => (),
     }
-
+    
     commands.set_state(LevelState::Loaded);
 }
 

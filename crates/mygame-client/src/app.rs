@@ -47,6 +47,10 @@ fn build_core_client_app(
             file_path: asset_path.clone(),
             meta_check: AssetMetaCheck::Never,
             ..default()
+        }).set(LogPlugin {
+            level: Level::DEBUG,
+            filter: "wgpu=error,bevy_render=info,bevy_ecs=info,offset_allocator=error,naga=warn".into(),
+            ..default()
         }),
         ClientPlugins {
             config: client_remote_config.clone(),

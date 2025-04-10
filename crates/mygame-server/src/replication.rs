@@ -1,5 +1,6 @@
 use avian3d::prelude::{Position, Rotation};
 use bevy::prelude::*;
+use leafwing_input_manager::prelude::ActionState;
 use lightyear::prelude::{
     FromClients, MessageSend, NetworkTarget, ReplicateHierarchy, Replicating, ServerConnectEvent,
     ServerConnectionManager, ServerDisconnectEvent, ServerReplicate,
@@ -8,8 +9,7 @@ use lightyear::prelude::{
 use mygame_assets::CurrentLevel;
 use mygame_common::REPLICATION_GROUP_PREDICTED;
 use mygame_protocol::{
-    component::{Player, Ship},
-    message::{ClientLevelLoadComplete, Level, ServerWelcome, UnorderedReliable},
+    component::{Player, Ship}, input::NetworkedInput, message::{ClientLevelLoadComplete, Level, ServerWelcome, UnorderedReliable}
 };
 
 pub struct ReplicationPlugin;

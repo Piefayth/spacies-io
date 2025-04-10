@@ -13,7 +13,6 @@ pub enum NetworkedInput {
 pub fn register_input(app: &mut App) {
     app.add_plugins(LeafwingInputPlugin {
         config: InputConfig::<NetworkedInput> {
-            lag_compensation: true,
             ..default()
         },
     });

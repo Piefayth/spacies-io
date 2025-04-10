@@ -6,3 +6,6 @@ target/
 .vscode/
 
 **/*.pem
+
+**/web/dist/**
+**/web/dist

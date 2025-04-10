@@ -1,4 +1,5 @@
-use bevy::{prelude::*, render::render_resource::{AsBindGroup, ShaderRef}, window::{CursorGrabMode, PrimaryWindow}};
+use bevy::{prelude::*, render::{render_resource::{AsBindGroup, ShaderRef}, view::RenderLayers}, window::{CursorGrabMode, PrimaryWindow}};
+use mygame_render::camera::MainCamera;
 
 use crate::{game_state::GameState, replication::LocalPlayer, ui::system_menu::SystemMenuState};
 
@@ -6,23 +7,9 @@ pub (crate) struct CrosshairPlugin;
 
 impl Plugin for CrosshairPlugin {
     fn build(&self, app: &mut App) {
-        /*
-            #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone, Copy, Hash, Reflect, Actionlike)]
-            pub enum NetworkedInput {
-                #[actionlike(DualAxis)]
-                Aim,
-            }
-         */
-        // using leafwing input manager, we will get the ActionState<NetworkedInput> from the LocalPlayer and use that to draw the crosshair
-        // the crosshair will be implemented as two separate quads using the same "crosshair" shader that we will have to implement
-        // this will be a "spaceship style" crosshair, hence the two quads (that will be positioned along an imaginary line shooting out from the front of the ship)
-        // in order to get the appropriate mesh positions, we will basically take the dual axis normalized "Aim" position, translate into window coordinates
-            // then shoot a ray from there into two intersecting vertical planes, one slightly further away from the other
-            // the position of intersection at each plane is the location for each mesh
-
         app
             .add_systems(Update, spawn_crosshair_meshes)
-            .add_systems(OnEnter(GameState::Playing), lock_mouse)
+            .add_systems(OnEnter(GameState::Playing), (lock_mouse, spawn_crosshair_camera))
             .add_systems(OnExit(GameState::Playing), unlock_mouse)
             .add_systems(OnEnter(SystemMenuState::Open), unlock_mouse)
             .add_systems(OnExit(SystemMenuState::Open), lock_mouse)
@@ -66,6 +53,22 @@ struct CrosshairNear;
 #[derive(Component)]
 struct CrosshairFar;
 
+fn spawn_crosshair_camera(
+    mut commands: Commands,
+    q_main_camera: Query<Entity, With<MainCamera>>,
+) {
+    let main_camera = q_main_camera.single();
+
+    commands.entity(main_camera).with_child((
+        Camera3d::default(),
+        RenderLayers::layer(1),
+        Camera {
+            order: 1,
+            ..default()
+        },
+        StateScoped(GameState::Playing),
+    ));
+}
 const CROSSHAIR_NEAR_DISTANCE: f32 = 20.0;
 const CROSSHAIR_FAR_DISTANCE: f32 = 50.0;
 const CROSSHAIR_VERTICAL_OFFSET: f32 = -0.5;
@@ -94,14 +97,16 @@ fn spawn_crosshair_meshes(
                     Mesh3d(near_plane.clone()),
                     MeshMaterial3d(near_crosshair_material),
                     CrosshairNear,
-                    Transform::from_translation(player_transform.forward() * CROSSHAIR_NEAR_DISTANCE + player_transform.up() * CROSSHAIR_VERTICAL_OFFSET)
+                    Transform::from_translation(player_transform.forward() * CROSSHAIR_NEAR_DISTANCE + player_transform.up() * CROSSHAIR_VERTICAL_OFFSET),
+                    RenderLayers::layer(1)
                 ));
 
                 child_builder.spawn((
                     Mesh3d(far_plane.clone()),
                     MeshMaterial3d(far_crosshair_material),
                     CrosshairFar,
-                    Transform::from_translation(player_transform.forward() * CROSSHAIR_FAR_DISTANCE  + player_transform.up() * CROSSHAIR_VERTICAL_OFFSET)
+                    Transform::from_translation(player_transform.forward() * CROSSHAIR_FAR_DISTANCE  + player_transform.up() * CROSSHAIR_VERTICAL_OFFSET),
+                    RenderLayers::layer(1)
                 ));
             });
     }

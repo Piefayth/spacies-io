@@ -1,5 +1,6 @@
 use avian3d::prelude::*;
-use bevy::prelude::*;
+use bevy::{ecs::entity::MapEntities, prelude::*};
+use leafwing_input_manager::prelude::ActionState;
 use lightyear::{
     prelude::{
         client::{ComponentSyncMode, LerpFn},
@@ -8,6 +9,8 @@ use lightyear::{
     utils::bevy::TransformLinearInterpolation,
 };
 
+use crate::input::NetworkedInput;
+
 #[derive(Component, Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct Player(pub ClientId);
 
@@ -15,10 +18,23 @@ pub struct Player(pub ClientId);
 pub struct Bot(pub u64);
 
 #[derive(Component, Serialize, Deserialize, Clone, Debug, PartialEq)]
-pub struct Projectile;
+pub struct Projectile {
+    pub owner: Entity
+}
+
+impl MapEntities for Projectile {
+    fn map_entities<M: EntityMapper>(&mut self, entity_mapper: &mut M) {
+        self.owner = entity_mapper.map_entity(self.owner);
+    }
+}
 
 #[derive(Component, Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct Ship;
+
+#[derive(Component, Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub enum ConfirmedFx {
+    ProjectileHit,
+}
 
 pub fn register_components(app: &mut App) {
     app.register_component::<Player>(ChannelDirection::ServerToClient)
@@ -35,11 +51,15 @@ pub fn register_components(app: &mut App) {
 
     app.register_component::<Projectile>(ChannelDirection::ServerToClient)
         .add_prediction(ComponentSyncMode::Once)
+        .add_interpolation(ComponentSyncMode::Once)
+        .add_map_entities();
+
+    app.register_component::<ConfirmedFx>(ChannelDirection::ServerToClient)
+        .add_prediction(ComponentSyncMode::Once)
         .add_interpolation(ComponentSyncMode::Once);
 
     app.register_component::<LinearVelocity>(ChannelDirection::ServerToClient)
-        .add_prediction(ComponentSyncMode::Once)
-        .add_interpolation(ComponentSyncMode::Once);
+        .add_prediction(ComponentSyncMode::Full);
 
     app.register_component::<Position>(ChannelDirection::ServerToClient)
         .add_prediction(ComponentSyncMode::Full)

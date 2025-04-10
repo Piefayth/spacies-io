@@ -1,7 +1,6 @@
 use bevy::prelude::*;
 use lightyear::{
-    client::config::ClientConfig,
-    prelude::{ClientConnectEvent, ClientDisconnectEvent, client::ClientCommandsExt},
+    client::config::ClientConfig, connection::client::ConnectionState, prelude::{client::{ClientCommandsExt, ClientConnection, NetClient}, ClientConnectEvent, ClientDisconnectEvent}
 };
 
 use crate::app::LaunchConfigurations;
@@ -15,11 +14,24 @@ impl Plugin for NetworkPlugin {
             OnEnter(GameState::ConnectingRemote),
             connect_to_remote_server,
         );
+        app.add_systems(
+            OnEnter(GameState::MainMenu),
+            disconnect_client
+        );
         #[cfg(feature = "host")]
         app.add_systems(OnEnter(GameState::ConnectingSelf), connect_to_local_server);
 
         app.add_observer(on_client_connect_success)
             .add_observer(on_client_disconnect);
+    }
+}
+
+fn disconnect_client(
+    mut commands: Commands,
+    client: Res<ClientConnection>,
+) {
+    if matches!(client.state(), ConnectionState::Connected) {
+        commands.disconnect_client();
     }
 }
 
