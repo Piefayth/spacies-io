@@ -9,7 +9,7 @@ use lightyear::prelude::{
 use mygame_assets::CurrentLevel;
 use mygame_common::REPLICATION_GROUP_PREDICTED;
 use mygame_protocol::{
-    component::{Player, Ship}, input::NetworkedInput, message::{ClientLevelLoadComplete, Level, ServerWelcome, UnorderedReliable}
+    component::{Health, Player, Ship}, input::NetworkedInput, message::{ClientLevelLoadComplete, Level, ServerWelcome, UnorderedReliable}
 };
 
 pub struct ReplicationPlugin;
@@ -37,6 +37,10 @@ fn on_client_load_complete(
                 Rotation::default(),
                 Player(ev.from),
                 Ship,
+                Health {
+                    current: 6,
+                    max: 6
+                },
                 ServerReplicate {
                     group: REPLICATION_GROUP_PREDICTED,
                     controlled_by: ControlledBy {

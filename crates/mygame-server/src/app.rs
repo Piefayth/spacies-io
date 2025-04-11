@@ -24,7 +24,7 @@ use lightyear::{
     prelude::*,
     server::{config::ServerConfig, plugin::ServerPlugins},
 };
-use mygame_common::CommonPlugin;
+use mygame_common::{CommonPlugin, LaunchConfigurations};
 use mygame_render::RenderPlugin;
 
 use crate::{bots::BotsPlugin, network::NetworkPlugin, replication::ReplicationPlugin};
@@ -79,7 +79,13 @@ pub fn build_server_app(server_config: ServerConfig, asset_path: String, mode: S
             match mode {
                 ServerMode::ClientHost(_) => {}
                 _ => {
-                    app.add_plugins(LogPlugin::default());
+                    app
+                        .add_plugins(LogPlugin::default())
+                        .insert_resource(LaunchConfigurations {
+                            server_config: Some(server_config.clone()),
+                            client_local_config: None,
+                            client_remote_config: None,
+                        });
                 }
             }
 

@@ -19,6 +19,7 @@ use crate::{
     interpolation::InterpolationPlugin, network::NetworkPlugin, replication::ReplicationPlugin,
     ui::UiPlugin,
 };
+use mygame_common::LaunchConfigurations;
 
 #[cfg(feature = "host")]
 use crate::host::HostPlugin;
@@ -29,13 +30,6 @@ use lightyear::prelude::client::IoConfig;
 /// to the client server, should they choose to host.
 #[derive(Resource)]
 pub struct AssetPath(pub String);
-
-#[derive(Resource)]
-pub struct LaunchConfigurations {
-    pub server_config: Option<ServerConfig>,
-    pub client_local_config: Option<ClientConfig>,
-    pub client_remote_config: Option<ClientConfig>,
-}
 
 fn build_core_client_app(
     app: &mut App,
@@ -48,8 +42,8 @@ fn build_core_client_app(
             meta_check: AssetMetaCheck::Never,
             ..default()
         }).set(LogPlugin {
-            level: Level::DEBUG,
-            filter: "wgpu=error,bevy_render=info,bevy_ecs=info,offset_allocator=error,naga=warn".into(),
+            level: Level::INFO,
+            filter: "wgpu=error,bevy_render=info,bevy_ecs=info,offset_allocator=error,naga=warn,bevy_hanabi=debug".into(),
             ..default()
         }),
         ClientPlugins {

@@ -16,7 +16,8 @@ use crate::{game_state::GameState, replication::LocalPlayer, ui::system_menu::Sy
 pub struct InputPlugin;
 impl Plugin for InputPlugin {
     fn build(&self, app: &mut App) {
-        app.add_plugins(InputManagerPlugin::<LocalInput>::default())
+        app.add_plugins(InputManagerPlugin::<SystemInput>::default())
+            .add_systems(Startup, spawn_system_input_entity)
             .add_systems(
                 Update,
                 (
@@ -31,9 +32,18 @@ impl Plugin for InputPlugin {
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone, Copy, Hash, Reflect, Actionlike)]
-pub enum LocalInput {
+pub enum SystemInput {
     #[actionlike(Button)]
     SystemMenuOrCancel,
+}
+
+fn spawn_system_input_entity(
+    mut commands: Commands
+) {
+    commands.spawn((
+        InputMap::<SystemInput>::default().with(SystemInput::SystemMenuOrCancel, KeyCode::Escape),
+        ActionState::<SystemInput>::default(),
+    ));
 }
 
 fn add_input_maps(
@@ -42,8 +52,6 @@ fn add_input_maps(
 ) {
     for player in &q_local_player {
         commands.entity(player).insert((
-            InputMap::<LocalInput>::default().with(LocalInput::SystemMenuOrCancel, KeyCode::Escape),
-            ActionState::<LocalInput>::default(),
             InputMap::<NetworkedInput>::default()
                 //.with_dual_axis(NetworkedInput::Aim, MouseMove::default().sensitivity(0.05).inverted_y())
                 .with_dual_axis(NetworkedInput::Aim, AimInput)
@@ -53,18 +61,18 @@ fn add_input_maps(
 }
 
 fn handle_system_menu_or_cancel(
-    q_local_inputs: Query<&ActionState<LocalInput>>,
+    q_local_inputs: Query<&ActionState<SystemInput>>,
     system_menu_state: Res<State<SystemMenuState>>,
     mut next_system_menu_state: ResMut<NextState<SystemMenuState>>,
     mut waiting_release: Local<bool>,
 ) {
     for local_input in &q_local_inputs {
         // hacking around `just_pressed` not working. why doesn't just_pressed work?
-        if local_input.released(&LocalInput::SystemMenuOrCancel) {
+        if local_input.released(&SystemInput::SystemMenuOrCancel) {
             *waiting_release = false;
         }
 
-        if local_input.pressed(&LocalInput::SystemMenuOrCancel) && !*waiting_release {
+        if local_input.pressed(&SystemInput::SystemMenuOrCancel) && !*waiting_release {
             *waiting_release = true;
             match **system_menu_state {
                 SystemMenuState::Open => next_system_menu_state.set(SystemMenuState::Closed),

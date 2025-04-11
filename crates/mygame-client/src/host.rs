@@ -5,13 +5,14 @@ use lightyear::prelude::server::ServerTransport;
 use lightyear::prelude::*;
 use lightyear::server::config::ServerConfig;
 use lightyear::{client::config::ClientConfig, prelude::client::ClientConnection};
+use mygame_common::LaunchConfigurations;
 use std::{
     net::{Ipv4Addr, SocketAddr},
     thread,
     time::Duration,
 };
 
-use crate::app::{AssetPath, LaunchConfigurations};
+use crate::app::{AssetPath};
 use crate::game_state::GameState;
 use mygame_server::app::{ServerMode, build_server_app};
 

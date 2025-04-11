@@ -1,20 +1,55 @@
-// use bevy::prelude::*;
-// use mygame_protocol::component::ConfirmedFx;
+use avian3d::prelude::Position;
+use bevy::prelude::*;
+use bevy_hanabi::{EffectProperties, ParticleEffect, Value, VectorValue};
+use lightyear::{client::message::ClientMessage, prelude::{FromServer, Message, TickManager}};
+use mygame_assets::assets::FxAssets;
+use mygame_common::{ship::DespawnAfter, Rendered};
+use mygame_protocol::{component::Ship, message::ServerShipHit};
 
-// pub (crate) struct FxPlugin;
+pub (crate) struct FxPlugin;
 
-// impl Plugin for FxPlugin {
-//     fn build(&self, app: &mut App) {
-//         app.add_systems(Update, render_vfx);
-//     }
-// }
+impl Plugin for FxPlugin {
+    fn build(&self, app: &mut App) {
+        app.add_systems(Update, render_ship_hit_fx);
+        app.add_observer(render_ship_destroy_fx);
+    }
+}
 
-// fn render_confirmed_fx(
-//     mut commands: Commands,
-//     fx_assets: Res<FxAsset
-//     q_fx: Query<&ConfirmedFx>,
-// ) {
-//     for fx in &q_fx {
+fn render_ship_hit_fx(
+    mut commands: Commands,
+    fx_assets: Res<FxAssets>,
+    tick_manager: Res<TickManager>,
+    mut ship_hit_event_reader: EventReader<FromServer<ServerShipHit>>,
+) {
+    for ev in ship_hit_event_reader.read() {
+        commands.spawn((
+            ParticleEffect::new(fx_assets.laser_hit_vfx.clone()),
+            Transform::from_translation(ev.message.position),
+            DespawnAfter {
+                created_at_tick: *tick_manager.tick(),
+                lifetime_ticks: 62,
+                is_server_controlled: false,
+            },
+        ));
+    }
+}
 
-//     }
-// }
+fn render_ship_destroy_fx(
+    trigger: Trigger<OnRemove, Ship>,
+    mut commands: Commands,
+    fx_assets: Res<FxAssets>,
+    tick_manager: Res<TickManager>,
+    q_rendered_ships: Query<&Position, (Rendered, With<Ship>)>,
+) {
+    if let Ok(ship_position) = q_rendered_ships.get(trigger.entity()) {
+        commands.spawn((
+            ParticleEffect::new(fx_assets.ship_destroy_vfx.clone()),
+            Transform::from_translation(ship_position.0),
+            DespawnAfter {
+                created_at_tick: *tick_manager.tick(),
+                lifetime_ticks: 62,
+                is_server_controlled: false,
+            },
+        ));
+    }
+}

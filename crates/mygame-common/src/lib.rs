@@ -1,8 +1,8 @@
 use avian3d::{prelude::{NarrowPhaseConfig, PhysicsInterpolationPlugin, PhysicsLayer}, sync::SyncConfig, PhysicsPlugins};
 use bevy::prelude::*;
-use lightyear::prelude::{
-    client::{Interpolated, Predicted, VisualInterpolateStatus}, server::ReplicationTarget, PreSpawnedPlayerObject, ReplicationGroup
-};
+use lightyear::{client::config::ClientConfig, prelude::{
+    client::{Confirmed, Interpolated, Predicted, VisualInterpolateStatus}, server::ReplicationTarget, PreSpawnedPlayerObject, ReplicationGroup
+}, server::config::ServerConfig};
 use mygame_assets::AssetPlugin;
 use mygame_protocol::ProtocolPlugin;
 
@@ -33,6 +33,13 @@ impl Plugin for CommonPlugin {
                 ..default()
             });
     }
+}
+
+#[derive(Resource)]
+pub struct LaunchConfigurations {
+    pub server_config: Option<ServerConfig>,
+    pub client_local_config: Option<ClientConfig>,
+    pub client_remote_config: Option<ClientConfig>,
 }
 
 pub type Simulated = Or<(With<Predicted>, With<ReplicationTarget>, With<PreSpawnedPlayerObject>)>;

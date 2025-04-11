@@ -3747,7 +3747,6 @@ dependencies = [
  "bevy_hanabi",
  "lightyear",
  "mygame-protocol",
- "mygame-render",
 ]
 
 [[package]]
@@ -3824,6 +3823,8 @@ dependencies = [
  "bevy_hanabi",
  "leafwing-input-manager",
  "lightyear",
+ "mygame-assets",
+ "mygame-common",
  "mygame-protocol",
  "serde",
 ]

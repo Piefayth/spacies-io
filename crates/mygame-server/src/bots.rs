@@ -4,7 +4,7 @@ use bevy_rand::{global::GlobalEntropy, prelude::{Entropy, WyRand}, traits::Forka
 use leafwing_input_manager::prelude::ActionState;
 use lightyear::prelude::{server::{ControlledBy, Lifetime, SyncTarget}, NetworkTarget, ReplicateHierarchy, ServerReplicate, TickManager};
 use mygame_common::REPLICATION_GROUP_PREDICTED;
-use mygame_protocol::{component::{Bot, Ship}, input::NetworkedInput};
+use mygame_protocol::{component::{Bot, Health, Ship}, input::NetworkedInput};
 use rand_core::RngCore;
 
 pub struct BotsPlugin;
@@ -24,7 +24,7 @@ struct BotAI {
 }
 
 const BOT_SPAWN_TICK_INTERVAL: u16 = 7;
-const MAX_BOTS: usize = 0;
+const MAX_BOTS: usize = 30;
 const SPAWN_RADIUS: f32 = 100.0;
 const CEILING_HEIGHT: f32 = 50.0;
 const TARGET_REACH_DISTANCE: f32 = 2.0;
@@ -49,6 +49,10 @@ fn spawn_bots(
     
     commands.spawn((
         Ship,
+        Health {
+            current: 6,
+            max: 6
+        },
         Bot(global_rng.next_u64()),
         BotAI {
             target_location: initial_target,

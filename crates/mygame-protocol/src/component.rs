@@ -32,8 +32,9 @@ impl MapEntities for Projectile {
 pub struct Ship;
 
 #[derive(Component, Serialize, Deserialize, Clone, Debug, PartialEq)]
-pub enum ConfirmedFx {
-    ProjectileHit,
+pub struct Health {
+    pub current: u16,
+    pub max: u16
 }
 
 pub fn register_components(app: &mut App) {
@@ -54,12 +55,11 @@ pub fn register_components(app: &mut App) {
         .add_interpolation(ComponentSyncMode::Once)
         .add_map_entities();
 
-    app.register_component::<ConfirmedFx>(ChannelDirection::ServerToClient)
-        .add_prediction(ComponentSyncMode::Once)
-        .add_interpolation(ComponentSyncMode::Once);
-
     app.register_component::<LinearVelocity>(ChannelDirection::ServerToClient)
         .add_prediction(ComponentSyncMode::Full);
+
+    app.register_component::<Health>(ChannelDirection::ServerToClient)
+        .add_prediction(ComponentSyncMode::Simple);
 
     app.register_component::<Position>(ChannelDirection::ServerToClient)
         .add_prediction(ComponentSyncMode::Full)

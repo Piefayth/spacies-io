@@ -1,13 +1,15 @@
-use assets::{GlobalAssets, LevelAssets};
+use assets::{FxAssets, GlobalAssets, LevelAssets};
 use avian3d::prelude::{Collider, ColliderConstructor, RigidBody};
 use bevy::{
-    asset::{AssetPlugin as BevyAssetPlugin, LoadState}, color::palettes::css::{GREEN, RED, WHITE}, gltf::{GltfMesh, GltfPlugin}, prelude::*, render::RenderApp
+    asset::{AssetPlugin as BevyAssetPlugin, LoadState}, color::palettes::css::{GREEN, RED, WHITE}, gltf::{GltfMesh, GltfPlugin}, prelude::*, render::RenderApp, ui::UiPlugin
 };
+use bevy_hanabi::HanabiPlugin;
+use materials::{GradientMaterial, SharedMaterialPlugin};
 use mygame_protocol::message::Level;
-use mygame_render::{materials::GradientMaterial, RenderPlugin};
 
 pub mod assets;
 mod effects;
+mod materials;
 
 pub struct AssetPlugin;
 
@@ -25,13 +27,17 @@ impl Plugin for AssetPlugin {
             .init_resource::<LoadingAssets>()
             .init_resource::<LevelAssets>()
             .init_resource::<GlobalAssets>()
+            .init_resource::<FxAssets>()
             .register_type::<Geometry>();
+        
+        // certain assets and asset processing steps require that rendering is enabled, we are using UiPlugin as a cheat-y way to check
+        if app.is_plugin_added::<UiPlugin>() {
+            app.add_systems(Startup, effects::register_fx);
 
-        // certain assets and asset processing steps require that rendering is enabled
-        if app.is_plugin_added::<RenderPlugin>() {
+            app.add_plugins(SharedMaterialPlugin);
+
             app.add_systems(OnEnter(LevelState::Postprocess), (
                 postprocess_render_assets,
-                effects::register_fx,
             ));
 
         }

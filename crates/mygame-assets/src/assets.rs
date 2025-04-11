@@ -13,6 +13,7 @@ pub struct GlobalAssets {
 #[derive(Resource, Default)]
 pub struct FxAssets {
     pub laser_hit_vfx: Handle<EffectAsset>,
+    pub ship_destroy_vfx: Handle<EffectAsset>,
 }
 
 #[derive(Resource, Default)]

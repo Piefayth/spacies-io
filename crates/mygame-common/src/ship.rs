@@ -9,13 +9,16 @@ use avian3d::prelude::{
 };
 use bevy::{app::FixedMain, gltf::GltfMesh, prelude::*};
 use leafwing_input_manager::{
-    action_state::DualAxisData, axislike::DualAxisType, buttonlike::ButtonState, prelude::{ActionState, GamepadStick, InputMap, MouseMove, VirtualDPad}
+    action_state::DualAxisData,
+    axislike::DualAxisType,
+    buttonlike::ButtonState,
+    prelude::{ActionState, GamepadStick, InputMap, MouseMove, VirtualDPad},
 };
 use lightyear::{
     client::prediction::rollback::DisableRollback,
     prelude::{
-        NetworkIdentity, NetworkTarget, PreSpawnedPlayerObject, ReplicateHierarchy,
-        ReplicateOnceComponent, ServerReplicate, TickManager,
+        ClientId, NetworkIdentity, NetworkTarget, PreSpawnedPlayerObject, ReplicateHierarchy,
+        ReplicateOnceComponent, ServerConnectionManager, ServerReplicate, TickManager,
         client::{
             Confirmed, Interpolated, Predicted, PredictionDespawnCommandsExt, Rollback,
             is_in_rollback,
@@ -25,8 +28,9 @@ use lightyear::{
 };
 use mygame_assets::{LevelState, assets::GlobalAssets};
 use mygame_protocol::{
-    component::{Bot, ConfirmedFx, Player, Projectile, Ship},
+    component::{Bot, Health, Player, Projectile, Ship},
     input::NetworkedInput,
+    message::{Reliable, ServerShipHit},
 };
 
 use crate::{
@@ -45,15 +49,7 @@ impl Plugin for ShipPlugin {
                 .after(RunFixedMainLoopSystem::AfterFixedMainLoop),
         );
 
-        app.add_systems(
-            FixedUpdate,
-            (
-                move_ship,
-                (fire, debug_projectiles).chain(),
-                despawn_after_lifetime,
-                debug_inputs
-            ),
-        );
+        app.add_systems(FixedUpdate, (move_ship, fire, despawn_after_lifetime, debug_damage_player));
 
         app.add_systems(
             FixedPostUpdate,
@@ -64,83 +60,100 @@ impl Plugin for ShipPlugin {
     }
 }
 
-fn debug_inputs(
+fn debug_damage_player(
+    mut commands: Commands,
+    mut q_ships: Query<(Entity, &mut Health, &Player), With<Ship>>,
     tick_manager: Res<TickManager>,
-    maybe_rollback: Option<Res<Rollback>>,
-    q_nw_in: Query<&ActionState<NetworkedInput>>,
-    q_player: Query<(&Position, &Rotation, &LinearVelocity), (With<Player>, Simulated)>,
+    network_identity: NetworkIdentity,
 ) {
-    let (tick, is_rollback) = match maybe_rollback {
-        Some(rb) => {
-            (tick_manager.tick_or_rollback_tick(rb.as_ref()), rb.is_rollback())
-        },
-        None => (tick_manager.tick(), false),
-    };
-
-    let Ok((player_pos, player_rot, player_vel)) = q_player.get_single() else {
+    // Only run on server
+    if !network_identity.is_server() {
         return;
-    };
-
-    for input in &q_nw_in {
-        if is_rollback {
-            warn!("     Rollback Tick({}), aim: {}", tick.0, input.dual_axis_data(&NetworkedInput::Aim).unwrap_or(&DualAxisData::default()).pair);
-            warn!("     Rollback Tick({}), pos: {}, rot: {}, vel: {}", tick.0, player_pos.0, player_rot.0, player_vel.0)
-        } else {
-            warn!("Tick ({}), aim: {}", tick.0, input.dual_axis_data(&NetworkedInput::Aim).unwrap_or(&DualAxisData::default()).pair);
-            warn!("Tick({}), pos: {}, rot: {}, vel: {}", tick.0, player_pos.0, player_rot.0, player_vel.0)
-        }
     }
 
+    let current_tick = *tick_manager.tick();
+    
+    // Only run every 100 ticks
+    if current_tick % 100 != 0 {
+        return;
+    }
+    
+    for (entity, mut health, player) in q_ships.iter_mut() {
+        // Reduce health by 1
+        if health.current <= 1 {
+            commands.entity(entity).despawn();
+        } else {
+            health.current -= 1;
+        }
+        
+        // Print debug info
+        println!("DEBUG: Player {:?} health reduced to {}", player.0, health.current);
+    }
 }
 
 fn handle_projectile_collisions(
     mut commands: Commands,
     mut collision_event_reader: EventReader<CollisionStarted>,
-    q_projectile: Query<(Entity, &Projectile)>,
-    q_ships: Query<&Ship>,
+    q_projectile: Query<(Entity, &Projectile, &Position)>,
+    mut q_ships: Query<(Entity, &Position, &mut Health), With<Ship>>,
     network_identity: NetworkIdentity,
 ) {
     for CollisionStarted(entity1, entity2) in collision_event_reader.read() {
-        let (projectile_entity, other_entity, projectile) =
-            if let Ok((projectile_entity, projectile)) = q_projectile.get(*entity1) {
-                (projectile_entity, entity2, projectile)
-            } else if let Ok((projectile_entity, projectile)) = q_projectile.get(*entity2) {
-                (projectile_entity, entity1, projectile)
+        let (projectile_entity, other_entity, projectile, projectile_position) =
+            if let Ok((projectile_entity, projectile, projectile_position)) =
+                q_projectile.get(*entity1)
+            {
+                (projectile_entity, entity2, projectile, projectile_position)
+            } else if let Ok((projectile_entity, projectile, projectile_position)) =
+                q_projectile.get(*entity2)
+            {
+                (projectile_entity, entity1, projectile, projectile_position)
             } else {
                 continue;
             };
-        
+
         if projectile.owner == *other_entity {
             continue;
         }
 
-        if let Ok(_) = q_ships.get(*other_entity) {
+        if let Ok((ship, ship_position, mut ship_health)) = q_ships.get_mut(*other_entity) {
             if network_identity.is_client() {
-                println!("CLIENT: Ship {} colliding with projectile {}", other_entity, projectile_entity);
-
                 commands
                     .entity(projectile_entity)
                     .insert((ColliderDisabled, Visibility::Hidden));
             } else {
-                println!("SERVER: Ship {} colliding with projectile {}", other_entity, projectile_entity);
+                commands.entity(projectile_entity).despawn();
 
-                commands
-                    .entity(projectile_entity)
-                    .despawn();
+                if ship_health.current <= 1 {
+                    commands.entity(ship).despawn();
+                } else {
+                    ship_health.current -= 1;
+                }
 
-                commands
-                    .spawn((
-                        ConfirmedFx::ProjectileHit,
-                        ServerReplicate {
-                            hierarchy: ReplicateHierarchy {
-                                enabled: false,
-                                ..default()
+
+                let projectile_position = *projectile_position.clone();
+
+                commands.queue(move |world: &mut World| {
+                    let mut server = world.resource_mut::<ServerConnectionManager>();
+                    let mut clients: Vec<ClientId> = vec![];
+
+                    for client in server.connected_clients() {
+                        clients.push(client);
+                    }
+
+                    for client in clients {
+                        let _ = server.send_message::<Reliable, ServerShipHit>(
+                            client,
+                            &ServerShipHit {
+                                position: projectile_position,
                             },
-                            ..default()
-                        },
-                    ));
-
+                        );
+                    }
+                })
             }
+        } else {
+            // projectile hit something other than a ship, do we care?
+            // or the ship doesn't have health
         }
     }
 }
@@ -156,7 +169,7 @@ fn add_rendered_ship_components(
 
     for ship_entity in &q_rendered_ship {
         commands.entity(ship_entity).insert((
-            Collider::sphere(1.0),
+            Collider::sphere(0.25),
             CollisionLayers::new(
                 CollisionMask::Ship,
                 [CollisionMask::Environment, CollisionMask::Projectile],
@@ -216,6 +229,7 @@ pub struct ShipWeapon {
 pub struct DespawnAfter {
     pub created_at_tick: u16,
     pub lifetime_ticks: u16,
+    pub is_server_controlled: bool,
 }
 
 impl DespawnAfter {
@@ -240,8 +254,10 @@ pub fn despawn_after_lifetime(
 
     for (entity, despawn_after) in q_despawn.iter() {
         if despawn_after.should_despawn(*current_tick) {
-            if network_identity.is_client() {
-                commands.entity(entity).insert(Visibility::Hidden); // instead, "Disabled" to prevent collision?
+            if network_identity.is_client() && despawn_after.is_server_controlled {
+                //commands.entity(entity).insert(Visibility::Hidden);
+
+                // Maybe just let the server handle despawning?
             } else {
                 commands.entity(entity).despawn();
             }
@@ -303,7 +319,7 @@ fn fire(
 
             if fire.pressed() && *tick > ship_weapon.last_fired_tick + ship_weapon.cooldown_ticks {
                 ship_weapon.last_fired_tick = *tick;
-                warn!("Tick ({}), FIRED", tick.0);
+
                 let offset_distance = 0.5;
                 let ship_right = ship_rotation.0 * Vec3::X;
                 let ship_up = ship_rotation.0 * Vec3::Y;
@@ -325,28 +341,26 @@ fn fire(
                 let left_projectile_base = (
                     Position(left_offset),
                     ship_rotation.clone(),
-                    Projectile {
-                        owner: ship_entity,
-                    },
+                    Projectile { owner: ship_entity },
                     LinearVelocity(projectile_velocity),
                     //PreSpawnedPlayerObject::new(left_hash),
                     DespawnAfter {
                         created_at_tick: *tick,
                         lifetime_ticks: 60,
+                        is_server_controlled: false,
                     },
                 );
 
                 let right_projectile_base = (
                     Position(right_offset),
                     ship_rotation.clone(),
-                    Projectile {
-                        owner: ship_entity,
-                    },
+                    Projectile { owner: ship_entity },
                     LinearVelocity(projectile_velocity),
                     //PreSpawnedPlayerObject::new(right_hash),
                     DespawnAfter {
                         created_at_tick: *tick,
                         lifetime_ticks: 60,
+                        is_server_controlled: false,
                     },
                 );
 
@@ -385,42 +399,6 @@ fn fire(
             }
         }
     }
-}
-
-fn debug_projectiles(
-    mut q_projectile: Query<
-        (
-            &mut Position,
-            &LinearVelocity,
-            Option<&PreSpawnedPlayerObject>,
-        ),
-        (
-            With<Projectile>,
-            Or<(With<Predicted>, With<PreSpawnedPlayerObject>)>,
-        ),
-    >,
-    time: Res<Time<Fixed>>,
-    tick_manager: Res<TickManager>,
-    network_identity: NetworkIdentity,
-    maybe_rollback: Option<Res<Rollback>>,
-) {
-    // let (tick, is_rollback) = match maybe_rollback {
-    //     Some(rb) => {
-    //         (tick_manager.tick_or_rollback_tick(rb.as_ref()), rb.is_rollback())
-    //     },
-    //     None => (tick_manager.tick(), false),
-    // };
-
-    // for (mut position, velocity, maybe_prespawn) in q_projectile.iter_mut() {
-    //     if network_identity.is_client() {
-    //         if is_rollback {
-    //             println!("      Rollback Tick ({}) projectile pos: {}, is prespawn: {}", tick.0, position.0, maybe_prespawn.is_some());
-    //         } else {
-    //             println!("Tick ({}) projectile pos: {}, is prespawn: {}", tick.0, position.0, maybe_prespawn.is_some());
-    //         }
-    //     }
-
-    // }
 }
 
 fn compute_hash(object_id: u64, client_id: u64, tick_manager: &TickManager) -> u64 {

@@ -2,8 +2,8 @@ use bevy::prelude::*;
 use lightyear::{
     client::config::ClientConfig, connection::client::ConnectionState, prelude::{client::{ClientCommandsExt, ClientConnection, NetClient}, ClientConnectEvent, ClientDisconnectEvent}
 };
+use mygame_common::LaunchConfigurations;
 
-use crate::app::LaunchConfigurations;
 use crate::game_state::GameState;
 
 pub (crate) struct NetworkPlugin;

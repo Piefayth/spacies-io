@@ -19,6 +19,11 @@ pub struct ClientLevelLoadComplete;
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct ClientHostRequestShutdown;
 
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct ServerShipHit {
+    pub position: Vec3,
+}
+
 #[derive(Channel)]
 pub struct UnorderedReliable;
 
@@ -27,6 +32,7 @@ pub struct Reliable;
 
 pub fn register_messages(app: &mut App) {
     app.register_message::<ServerWelcome>(ChannelDirection::ServerToClient);
+    app.register_message::<ServerShipHit>(ChannelDirection::ServerToClient);
 
     app.register_message::<ClientLevelLoadComplete>(ChannelDirection::ClientToServer);
     app.register_message::<ClientHostRequestShutdown>(ChannelDirection::ClientToServer);
