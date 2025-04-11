@@ -1,7 +1,7 @@
 use bevy::{prelude::*, render::{render_resource::{AsBindGroup, ShaderRef}, view::RenderLayers}, window::{CursorGrabMode, PrimaryWindow}};
 use mygame_render::camera::MainCamera;
 
-use crate::{game_state::GameState, replication::LocalPlayer, ui::system_menu::SystemMenuState};
+use crate::{game_state::GameState, replication::LocalPlayer, ui::{respawn_menu::RespawnMenuState, system_menu::SystemMenuState}};
 
 pub (crate) struct CrosshairPlugin;
 
@@ -13,6 +13,8 @@ impl Plugin for CrosshairPlugin {
             .add_systems(OnExit(GameState::Playing), unlock_mouse)
             .add_systems(OnEnter(SystemMenuState::Open), unlock_mouse)
             .add_systems(OnExit(SystemMenuState::Open), lock_mouse)
+            .add_systems(OnEnter(RespawnMenuState::Open), unlock_mouse)
+            .add_systems(OnExit(RespawnMenuState::Open), lock_mouse)
             .add_plugins(
                 MaterialPlugin::<CrosshairMaterial>::default(),
             );

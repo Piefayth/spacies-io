@@ -9,7 +9,7 @@ use lightyear::prelude::{
 use mygame_assets::CurrentLevel;
 use mygame_common::REPLICATION_GROUP_PREDICTED;
 use mygame_protocol::{
-    component::{Health, Player, Ship}, input::NetworkedInput, message::{ClientLevelLoadComplete, Level, ServerWelcome, UnorderedReliable}
+    component::{Health, Player, Ship}, input::NetworkedInput, message::{ClientRequestRespawn, Level, ServerWelcome, UnorderedReliable}
 };
 
 pub struct ReplicationPlugin;
@@ -18,12 +18,12 @@ impl Plugin for ReplicationPlugin {
         app.add_observer(on_client_connect_success);
         app.add_observer(on_client_disconnect);
 
-        app.add_systems(Update, on_client_load_complete);
+        app.add_systems(Update, on_client_request_respawn);
     }
 }
 
-fn on_client_load_complete(
-    mut ev_client_load_complete: ResMut<Events<FromClients<ClientLevelLoadComplete>>>,
+fn on_client_request_respawn(
+    mut ev_client_load_complete: ResMut<Events<FromClients<ClientRequestRespawn>>>,
     mut commands: Commands,
     q_players: Query<&Player>,
 ) {
@@ -60,7 +60,7 @@ fn on_client_load_complete(
             ));
         } else {
             warn!(
-                "Client {} reported load complete, but character already existed in world. Ignoring.",
+                "Client {} requested a respawn, but character already existed in world. Ignoring.",
                 ev.from
             );
         }

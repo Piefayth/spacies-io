@@ -8,7 +8,7 @@ use mygame_assets::{CurrentLevel, LevelState};
 use mygame_common::Rendered;
 use mygame_protocol::{
     component::Player,
-    message::{ClientLevelLoadComplete, ServerWelcome, UnorderedReliable},
+    message::{ClientRequestRespawn, ServerWelcome, UnorderedReliable},
 };
 use mygame_render::camera::CameraTarget;
 
@@ -24,7 +24,7 @@ impl Plugin for ReplicationPlugin {
                 on_server_welcome.run_if(in_state(GameState::ConnectingSelf)),
             ),
         );
-        app.add_systems(Update, await_spawn.run_if(in_state(GameState::Spawning)));
+        app.add_systems(Update, await_spawn);
         app.add_systems(OnEnter(LevelState::Loaded), on_assets_loaded);
     }
 }
@@ -39,7 +39,7 @@ fn on_assets_loaded(mut commands: Commands, mut client: ResMut<ClientConnectionM
     commands.set_state(GameState::Spawning);
 
     if let Err(e) =
-        client.send_message::<UnorderedReliable, ClientLevelLoadComplete>(&ClientLevelLoadComplete)
+        client.send_message::<UnorderedReliable, ClientRequestRespawn>(&ClientRequestRespawn)
     {
         println!("unable to signal client level load complete due to {}", e);
         commands.disconnect_client();
@@ -62,9 +62,15 @@ fn on_server_welcome(
 fn await_spawn(
     mut commands: Commands,
     q_spawned_player: Query<(Entity, &Player), (Rendered, Added<Player>)>,
+    q_local_player: Query<&LocalPlayer>, 
     client: Res<ClientConnection>,
 ) {
     for (entity, player) in &q_spawned_player {
+        if !q_local_player.is_empty() {
+            warn!("Server spawned a local player when one already existed? Ignoring.");
+            return;
+        }
+
         if player.0 == client.id() {
             commands.entity(entity)
                 .insert((

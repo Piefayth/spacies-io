@@ -68,14 +68,14 @@ fn spawn_bots(
                 target: NetworkTarget::None,
                 ..default()
             },
-            // sync: SyncTarget {
-            //     prediction: NetworkTarget::All,
-            //     interpolation: NetworkTarget::None,
-            // },
             sync: SyncTarget {
-                prediction: NetworkTarget::None,
-                interpolation: NetworkTarget::All,
+                prediction: NetworkTarget::All,
+                interpolation: NetworkTarget::None,
             },
+            // sync: SyncTarget {
+            //     prediction: NetworkTarget::None,
+            //     interpolation: NetworkTarget::All,
+            // },
             hierarchy: ReplicateHierarchy {
                 enabled: false,
                 ..default()

@@ -14,7 +14,7 @@ pub struct ServerWelcome {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-pub struct ClientLevelLoadComplete;
+pub struct ClientRequestRespawn;
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct ClientHostRequestShutdown;
@@ -34,7 +34,7 @@ pub fn register_messages(app: &mut App) {
     app.register_message::<ServerWelcome>(ChannelDirection::ServerToClient);
     app.register_message::<ServerShipHit>(ChannelDirection::ServerToClient);
 
-    app.register_message::<ClientLevelLoadComplete>(ChannelDirection::ClientToServer);
+    app.register_message::<ClientRequestRespawn>(ChannelDirection::ClientToServer);
     app.register_message::<ClientHostRequestShutdown>(ChannelDirection::ClientToServer);
 
     app.add_channel::<UnorderedReliable>(ChannelSettings {
