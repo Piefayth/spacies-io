@@ -1,19 +1,46 @@
 use bevy::{
-    prelude::*,
-    render::{
-        render_resource::{AsBindGroup, ShaderRef},
-        mesh::MeshVertexBufferLayout,
-    },
+    asset::RenderAssetUsages, color::palettes::css::{BLUE, RED}, pbr::{NotShadowCaster, NotShadowReceiver}, prelude::*, render::{
+        mesh::MeshVertexBufferLayout, render_resource::{AsBindGroup, Extent3d, ShaderRef, TextureDimension, TextureFormat, TextureViewDescriptor, TextureViewDimension}
+    }
 };
+use mygame_assets::assets::GlobalAssets;
+use mygame_render::camera::MainCamera;
+
+use crate::game_state::GameState;
 
 // A standalone plugin that spawns a checkered plane with a shader
 pub (crate) struct ThrowawayPlugin;
 impl Plugin for ThrowawayPlugin {
     fn build(&self, app: &mut App) {
         app.add_plugins(MaterialPlugin::<CheckerMaterial>::default())
-           .add_systems(Startup, spawn_shader_plane);
+           //.add_systems(Startup, spawn_shader_plane);
+            .add_systems(OnEnter(GameState::Playing), add_sky_to_camera);
     }
 }
+
+fn add_sky_to_camera(
+    mut commands: Commands,
+    q_main_camera: Query<Entity, (With<MainCamera>, Without<EnvironmentMapLight>)>,
+    global_assets: Res<GlobalAssets>,
+) {
+    for camera in &q_main_camera {
+        commands.entity(camera).insert(EnvironmentMapLight {
+            diffuse_map: global_assets.skybox_image.clone(),
+            specular_map: global_assets.skybox_image.clone(),
+            intensity: 3000.,
+            ..default()
+        })
+        .with_child((
+            NotShadowCaster,
+            NotShadowReceiver,
+            Name::new("Skybox"),
+            Mesh3d(global_assets.skybox_mesh.clone()),
+            MeshMaterial3d(global_assets.skybox_material.clone()),
+        ));
+    }
+}
+
+
 
 // Custom material for the checker pattern
 #[derive(Asset, AsBindGroup, TypePath, Debug, Clone)]

@@ -74,7 +74,7 @@ fn debug_damage_player(
     let current_tick = *tick_manager.tick();
     
     // Only run every 100 ticks
-    if current_tick % 100 != 0 {
+    if current_tick % 10000 != 0 {
         return;
     }
     
@@ -416,6 +416,9 @@ const MAX_ROLL_ANGLE: f32 = std::f32::consts::FRAC_PI_2; // 90 degrees
 const MAX_PITCH_ANGLE: f32 = std::f32::consts::FRAC_PI_4; // 45 degrees
 const TURN_RATE: f32 = 1.0;
 const PITCH_RATE: f32 = 1.0;
+const MIN_HEIGHT: f32 = 5.0; // Minimum allowed height
+const MAX_HEIGHT: f32 = 75.0; // Maximum allowed height
+const ARENA_RADIUS: f32 = 100.0; // Maximum distance from origin in the XZ plane
 
 fn move_ship(
     mut q_ship: Query<
@@ -423,17 +426,18 @@ fn move_ship(
             &ActionState<NetworkedInput>,
             &mut LinearVelocity,
             &mut Rotation,
+            &Transform, // Added position to track height
         ),
         (Simulated, With<Ship>),
     >,
     time: Res<Time<Fixed>>,
 ) {
-    for (action_state, mut velocity, mut rotation) in q_ship.iter_mut() {
+    for (action_state, mut velocity, mut rotation, transform) in q_ship.iter_mut() {
         if let Some(movement) = action_state.dual_axis_data(&NetworkedInput::Aim) {
             // Get current orientation vectors
             let forward = (rotation.0 * -Vec3::Z).normalize();
             let up = (rotation.0 * Vec3::Y).normalize();
-
+            
             // Calculate current pitch angle
             let forward_xz_raw = Vec3::new(forward.x, 0.0, forward.z);
             // Check if vector is too small to normalize
@@ -443,20 +447,23 @@ fn move_ship(
                 // We're looking nearly straight up/down - use a fallback direction
                 Vec3::new(0.0, 0.0, 1.0)
             };
-
+            
             // Ensure dot product is in valid range for acos
             let dot = forward.dot(forward_xz).clamp(-1.0, 1.0);
             let current_pitch = dot.acos() * if forward.y < 0.0 { -1.0 } else { 1.0 };
+            
+            // Get current height and determine if we need to override pitch input
+            let current_height = transform.translation.y;
+            let pitch_input = movement.pair.y * PITCH_RATE * time.delta_secs();
 
             // Calculate new pitch amount, respecting limits
-            let pitch_input = movement.pair.y * PITCH_RATE * time.delta_secs();
             let new_pitch = (current_pitch + pitch_input).clamp(-MAX_PITCH_ANGLE, MAX_PITCH_ANGLE);
             let pitch_change = new_pitch - current_pitch;
-
+            
             // Apply yaw around world up
             let yaw_quat = Quat::from_rotation_y(-movement.pair.x * TURN_RATE * time.delta_secs());
             let forward_after_yaw = yaw_quat.mul_vec3(forward).normalize();
-
+            
             // Calculate right vector
             let right_raw = forward_after_yaw.cross(Vec3::Y);
             let right = if right_raw.length_squared() > 1e-6 {
@@ -465,14 +472,14 @@ fn move_ship(
                 // Forward is aligned with Y axis, use X as fallback
                 Vec3::X
             };
-
+            
             // Apply constrained pitch around right vector
             let pitch_quat = Quat::from_axis_angle(right, pitch_change);
             let final_forward = pitch_quat.mul_vec3(forward_after_yaw).normalize();
-
+            
             // Calculate desired roll based on input (constrained)
             let roll_angle = movement.pair.x * MAX_ROLL_ANGLE;
-
+            
             // Create a basis with the correct forward direction but no roll
             let no_roll_right_raw = final_forward.cross(Vec3::Y);
             let no_roll_right = if no_roll_right_raw.length_squared() > 1e-6 {
@@ -480,21 +487,55 @@ fn move_ship(
             } else {
                 Vec3::X
             };
-
             let no_roll_up = no_roll_right.cross(final_forward).normalize();
-
+            
             // Apply roll around forward axis
             let roll_quat = Quat::from_axis_angle(final_forward, roll_angle);
             let rolled_up = roll_quat.mul_vec3(no_roll_up).normalize();
-
+            
             // Create final quaternion from orthonormal basis
             let final_right = final_forward.cross(rolled_up).normalize();
             let rot_matrix = Mat3::from_cols(final_right, rolled_up, -final_forward);
             rotation.0 = Quat::from_mat3(&rot_matrix);
         }
-
+        
         // Always move forward in the direction the ship is facing
         let forward = (rotation.0 * -Vec3::Z).normalize();
-        velocity.0 = forward * SHIP_MOVE_SPEED;
+        
+        let mut adjusted_velocity = forward * SHIP_MOVE_SPEED;
+        
+        // Check height constraints
+        let current_height = transform.translation.y;
+        if (current_height <= MIN_HEIGHT && forward.y < 0.0) || 
+           (current_height >= MAX_HEIGHT && forward.y > 0.0) {
+            // Remove vertical component of velocity when at height boundaries
+            adjusted_velocity.y = 0.0;
+        }
+        
+        // Check arena radius constraint
+        let current_pos_xz = Vec2::new(transform.translation.x, transform.translation.z);
+        let distance_from_origin = current_pos_xz.length();
+        
+        if distance_from_origin >= ARENA_RADIUS {
+            // Calculate direction from origin to ship (normalized)
+            let dir_from_origin = if distance_from_origin > 0.001 {
+                current_pos_xz / distance_from_origin
+            } else {
+                Vec2::new(1.0, 0.0) // Default direction if at origin
+            };
+            
+            // Project the forward direction onto the direction from origin
+            let forward_xz = Vec2::new(forward.x, forward.z);
+            let outward_component = forward_xz.dot(dir_from_origin);
+            
+            // If moving outward at the boundary, remove that component
+            if outward_component > 0.0 {
+                // Remove the outward component from velocity
+                adjusted_velocity.x -= dir_from_origin.x * outward_component * SHIP_MOVE_SPEED;
+                adjusted_velocity.z -= dir_from_origin.y * outward_component * SHIP_MOVE_SPEED;
+            }
+        }
+        
+        velocity.0 = adjusted_velocity;
     }
 }

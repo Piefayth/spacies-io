@@ -2,12 +2,18 @@ use avian3d::prelude::Collider;
 use bevy::prelude::*;
 use bevy_hanabi::EffectAsset;
 
+use crate::materials::SkyboxMaterial;
+
 #[derive(Resource, Default)]
 pub struct GlobalAssets {
     pub character: Handle<Scene>,
     pub bot: Handle<Scene>,
     pub laser: Handle<Scene>,
     pub target: Handle<Scene>,
+
+    pub skybox_mesh: Handle<Mesh>,
+    pub skybox_image: Handle<Image>,
+    pub skybox_material: Handle<SkyboxMaterial>,
 }
 
 #[derive(Resource, Default)]

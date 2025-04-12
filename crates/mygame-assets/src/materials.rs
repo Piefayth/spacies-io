@@ -7,6 +7,8 @@ impl Plugin for SharedMaterialPlugin {
         app.add_plugins(MaterialPlugin::<GradientMaterial>::default())
             .register_type::<GradientMaterial>()
             .register_asset_reflect::<GradientMaterial>();
+
+        app.add_plugins(MaterialPlugin::<SkyboxMaterial>::default());
     }
 }
 
@@ -35,5 +37,18 @@ impl Material for GradientMaterial {
     }
     fn fragment_shader() -> ShaderRef {
         "shaders/gradient.wgsl".into()
+    }
+}
+
+#[derive(AsBindGroup, TypePath, Debug, Clone, Asset)]
+pub struct SkyboxMaterial {
+    #[texture(0, dimension = "cube")]
+    #[sampler(1)]
+    pub sky_texture: Handle<Image>,
+}
+
+impl Material for SkyboxMaterial {
+    fn fragment_shader() -> ShaderRef {
+        "shaders/skybox.wgsl".into()
     }
 }
