@@ -1,7 +1,7 @@
 use avian3d::prelude::Position;
 use bevy::prelude::*;
 use bevy_hanabi::{EffectProperties, ParticleEffect, Value, VectorValue};
-use lightyear::{client::message::ClientMessage, prelude::{FromServer, Message, TickManager}};
+use lightyear::{client::message::ClientMessage, prelude::{is_client, FromServer, Message, TickManager}};
 use mygame_assets::assets::FxAssets;
 use mygame_common::{ship::DespawnAfter, Rendered};
 use mygame_protocol::{component::Ship, message::ServerShipHit};
@@ -10,7 +10,7 @@ pub (crate) struct FxPlugin;
 
 impl Plugin for FxPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(Update, render_ship_hit_fx);
+        app.add_systems(Update, render_ship_hit_fx.run_if(is_client));
         app.add_observer(render_ship_destroy_fx);
     }
 }

@@ -23,10 +23,10 @@ impl Plugin for CommonPlugin {
                 level::LevelPlugin,
                 ship::ShipPlugin,
             ))
-            .insert_resource(NarrowPhaseConfig {
-                contact_tolerance: 0.1,
-                ..default()
-            })
+            // .insert_resource(NarrowPhaseConfig {
+            //     contact_tolerance: 0.1,
+            //     ..default()
+            // })
             .insert_resource(SyncConfig {
                 transform_to_position: false,
                 position_to_transform: true,
@@ -44,15 +44,6 @@ pub struct LaunchConfigurations {
 
 pub type Simulated = Or<(With<Predicted>, With<ReplicationTarget>, With<PreSpawnedPlayerObject>)>;
 pub type Rendered = Or<(Simulated, With<Interpolated>)>;
-
-#[derive(PhysicsLayer, Default)]
-pub enum CollisionMask {
-    #[default]
-    Nothing,
-    Ship,
-    Environment,
-    Projectile
-}
 
 pub const REPLICATION_GROUP_PREDICTED: ReplicationGroup = ReplicationGroup::new_id(42);
 pub const LEFT_PROJECTILE_ID: u64 = 23895723;

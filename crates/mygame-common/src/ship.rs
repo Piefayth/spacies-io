@@ -26,7 +26,7 @@ use lightyear::{
         server::{ControlledBy, Lifetime, ReplicationTarget, SyncTarget},
     },
 };
-use mygame_assets::{LevelState, assets::GlobalAssets};
+use mygame_assets::{assets::GlobalAssets, CollisionMask, LevelState};
 use mygame_protocol::{
     component::{Bot, Health, Player, Projectile, Ship},
     input::NetworkedInput,
@@ -34,7 +34,7 @@ use mygame_protocol::{
 };
 
 use crate::{
-    CollisionMask, LEFT_PROJECTILE_ID, REPLICATION_GROUP_PREDICTED, RIGHT_PROJECTILE_ID, Rendered,
+    LEFT_PROJECTILE_ID, REPLICATION_GROUP_PREDICTED, RIGHT_PROJECTILE_ID, Rendered,
     Simulated,
 };
 
@@ -49,7 +49,7 @@ impl Plugin for ShipPlugin {
                 .after(RunFixedMainLoopSystem::AfterFixedMainLoop),
         );
 
-        app.add_systems(FixedUpdate, (move_ship, fire, despawn_after_lifetime, debug_damage_player));
+        app.add_systems(FixedUpdate, (move_ship, fire, despawn_after_lifetime));
 
         app.add_systems(
             FixedPostUpdate,
@@ -60,63 +60,54 @@ impl Plugin for ShipPlugin {
     }
 }
 
-fn debug_damage_player(
-    mut commands: Commands,
-    mut q_ships: Query<(Entity, &mut Health, &Player), With<Ship>>,
-    tick_manager: Res<TickManager>,
-    network_identity: NetworkIdentity,
-) {
-    // Only run on server
-    if !network_identity.is_server() {
-        return;
-    }
-
-    let current_tick = *tick_manager.tick();
-    
-    // Only run every 100 ticks
-    if current_tick % 10000 != 0 {
-        return;
-    }
-    
-    for (entity, mut health, player) in q_ships.iter_mut() {
-        // Reduce health by 1
-        if health.current <= 1 {
-            commands.entity(entity).despawn();
-        } else {
-            health.current -= 1;
-        }
-        
-        // Print debug info
-        println!("DEBUG: Player {:?} health reduced to {}", player.0, health.current);
-    }
-}
 
 fn handle_projectile_collisions(
     mut commands: Commands,
-    mut collision_event_reader: EventReader<CollisionStarted>,
+    mut collision_event_reader: EventReader<Collision>,
     q_projectile: Query<(Entity, &Projectile, &Position)>,
     mut q_ships: Query<(Entity, &Position, &mut Health), With<Ship>>,
     network_identity: NetworkIdentity,
 ) {
-    for CollisionStarted(entity1, entity2) in collision_event_reader.read() {
+    for Collision(contacts) in collision_event_reader.read() {
+        // note that we check the "body entity" for other entity, because collider may not be on the parent
         let (projectile_entity, other_entity, projectile, projectile_position) =
-            if let Ok((projectile_entity, projectile, projectile_position)) =
-                q_projectile.get(*entity1)
-            {
-                (projectile_entity, entity2, projectile, projectile_position)
-            } else if let Ok((projectile_entity, projectile, projectile_position)) =
-                q_projectile.get(*entity2)
-            {
-                (projectile_entity, entity1, projectile, projectile_position)
-            } else {
-                continue;
+        if let Ok((projectile_entity, projectile, projectile_position)) =
+            q_projectile.get(contacts.entity1)
+        {
+            // Check if body_entity2 exists before using it
+            let Some(body_entity2) = contacts.body_entity2 else {
+                continue; // Skip this collision if there's no body entity
             };
+            (projectile_entity, body_entity2, projectile, projectile_position)
+        } else if let Ok((projectile_entity, projectile, projectile_position)) =
+            q_projectile.get(contacts.entity2)
+        {
+            // Check if body_entity1 exists before using it
+            let Some(body_entity1) = contacts.body_entity1 else {
+                continue; // Skip this collision if there's no body entity
+            };
+            (projectile_entity, body_entity1, projectile, projectile_position)
+        } else {
+            continue;
+        };
 
-        if projectile.owner == *other_entity {
+        if projectile.owner == other_entity {
             continue;
         }
 
-        if let Ok((ship, ship_position, mut ship_health)) = q_ships.get_mut(*other_entity) {
+        if contacts.manifolds.is_empty() {
+            continue;
+        }
+
+        let is_penetrating = contacts.manifolds.iter().any(|manifold| 
+            manifold.contacts.iter().any(|contact| contact.penetration > 0.0)
+        );
+
+        if !is_penetrating {
+            continue;
+        }
+
+        if let Ok((ship, ship_position, mut ship_health)) = q_ships.get_mut(other_entity) {
             if network_identity.is_client() {
                 commands
                     .entity(projectile_entity)
@@ -154,13 +145,14 @@ fn handle_projectile_collisions(
         } else {
             // projectile hit something other than a ship, do we care?
             // or the ship doesn't have health
+            warn!("projectile hit something other than a ship and you arent doing anything with that");
         }
     }
 }
 
 fn add_rendered_ship_components(
     mut commands: Commands,
-    q_rendered_ship: Query<Entity, (Rendered, Without<Collider>, With<Ship>)>,
+    q_rendered_ship: Query<Entity, (Rendered, Without<Children>, With<Ship>)>,
     global_assets: Res<GlobalAssets>,
 ) {
     if q_rendered_ship.is_empty() {
@@ -169,12 +161,15 @@ fn add_rendered_ship_components(
 
     for ship_entity in &q_rendered_ship {
         commands.entity(ship_entity).insert((
-            Collider::sphere(0.25),
+            // Collision is here instead of in add_simulated_ship_components in case we want to try interpolated ships
+            SceneRoot(global_assets.character.clone()),
+        )).with_child((
+            Collider::cuboid(2.0, 0.75, 2.0), 
             CollisionLayers::new(
                 CollisionMask::Ship,
                 [CollisionMask::Environment, CollisionMask::Projectile],
             ),
-            SceneRoot(global_assets.character.clone()),
+            Transform::from_translation(Vec3::Y * 0.25), // better alignment vertically
         ));
     }
 }
@@ -208,7 +203,7 @@ fn add_simulated_projectile_components(
     for projectile_entity in &q_projectile {
         commands.entity(projectile_entity).insert((
             RigidBody::Kinematic,
-            Collider::capsule_endpoints(0.5, Vec3::Z * -1., Vec3::Z * 1.),
+            Collider::capsule_endpoints(0.25, Vec3::Z * -1., Vec3::Z * 1.),
             CollisionLayers::new(
                 CollisionMask::Projectile,
                 [CollisionMask::Environment, CollisionMask::Ship],

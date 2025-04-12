@@ -1,7 +1,12 @@
 use assets::{FxAssets, GlobalAssets, LevelAssets};
-use avian3d::prelude::{Collider, ColliderConstructor, RigidBody};
+use avian3d::prelude::{Collider, ColliderConstructor, CollisionLayers, PhysicsLayer, RigidBody};
 use bevy::{
-    asset::{AssetPlugin as BevyAssetPlugin, LoadState}, color::palettes::css::{BLUE, GREEN, RED, WHITE}, gltf::{GltfMesh, GltfPlugin}, prelude::*, render::RenderApp, ui::UiPlugin
+    asset::{AssetPlugin as BevyAssetPlugin, LoadState},
+    color::palettes::css::{BLUE, GREEN, RED, WHITE},
+    gltf::{GltfMesh, GltfPlugin},
+    prelude::*,
+    render::RenderApp,
+    ui::UiPlugin,
 };
 use bevy_hanabi::HanabiPlugin;
 use images::hemispherical_gradient;
@@ -11,19 +16,21 @@ use mygame_protocol::message::Level;
 
 pub mod assets;
 mod effects;
+mod images;
 mod materials;
 mod meshes;
-mod images;
 
 pub struct AssetPlugin;
 
 impl Plugin for AssetPlugin {
     fn build(&self, app: &mut App) {
-        app
-            .add_systems(Update, on_level_change)
+        app.add_systems(Update, on_level_change)
             .add_systems(
                 Update,
-                check_asset_loading.run_if(in_state(LevelState::Loading)),
+                (
+                    check_asset_loading.run_if(in_state(LevelState::Loading)),
+                    apply_rigid_bodies,
+                ),
             )
             .add_systems(OnEnter(LevelState::Postprocess), postprocess_assets)
             .init_state::<LevelState>()
@@ -32,19 +39,29 @@ impl Plugin for AssetPlugin {
             .init_resource::<LevelAssets>()
             .init_resource::<GlobalAssets>()
             .init_resource::<FxAssets>()
-            .register_type::<Geometry>();
-        
+            .register_type::<Geometry>()
+            .register_type::<NeedsRigidBody>();
+
         // certain assets and asset processing steps require that rendering is enabled, we are using UiPlugin as a cheat-y way to check
         if app.is_plugin_added::<UiPlugin>() {
             app.add_systems(Startup, effects::register_fx);
 
             app.add_plugins(SharedMaterialPlugin);
 
-            app.add_systems(OnEnter(LevelState::Postprocess), (
-                postprocess_render_assets,
-            ));
-
+            app.add_systems(
+                OnEnter(LevelState::Postprocess),
+                (postprocess_render_assets,),
+            );
         }
+    }
+}
+
+fn apply_rigid_bodies(mut commands: Commands, query: Query<(Entity, &NeedsRigidBody)>) {
+    for (entity, needs_rigid_body) in &query {
+        commands
+            .entity(entity)
+            .insert(needs_rigid_body.0.clone())
+            .remove::<NeedsRigidBody>();
     }
 }
 
@@ -94,18 +111,18 @@ fn on_level_change(
         asset_server.load(GltfAssetLabel::Scene(0).from_asset("scenes/craft_speederB.glb"));
     global_assets.bot =
         asset_server.load(GltfAssetLabel::Scene(0).from_asset("scenes/craft_speederC.glb"));
-    global_assets.laser =
-        asset_server.load(GltfAssetLabel::Scene(0).from_asset("scenes/weapon-ammo-arrow-scaled.glb"));
+    global_assets.laser = asset_server
+        .load(GltfAssetLabel::Scene(0).from_asset("scenes/weapon-ammo-arrow-scaled.glb"));
     global_assets.target =
         asset_server.load(GltfAssetLabel::Scene(0).from_asset("scenes/target-large.glb"));
-        
+
     global_assets.skybox_mesh = meshes.add(skybox_mesh(10000.));
     global_assets.skybox_image = images.add(hemispherical_gradient(BLUE.into(), RED.into()));
 
     match **current_level {
         Level::Example => {
             level_assets.example_level = asset_server
-                .load(GltfAssetLabel::Scene(0).from_asset("scenes/Cylinder.glb"));
+                .load(GltfAssetLabel::Scene(0).from_asset("scenes/TestEnvironment.glb"));
 
             loading_assets
                 .handles
@@ -135,6 +152,20 @@ fn check_asset_loading(
         loading_assets.handles.clear();
     }
 }
+
+// TODO: This goes somewhere else? Can't be in common, because we need it here
+#[derive(PhysicsLayer, Default)]
+pub enum CollisionMask {
+    #[default]
+    Nothing,
+    Ship,
+    Environment,
+    Projectile,
+}
+
+#[derive(Component, Reflect)]
+#[reflect(Component)]
+pub struct NeedsRigidBody(pub RigidBody);
 
 fn postprocess_assets(
     mut commands: Commands,
@@ -166,14 +197,19 @@ fn postprocess_assets(
                         scene
                             .world
                             .entity_mut(entity)
-                            .insert((ColliderConstructor::TrimeshFromMesh, Geometry));
+                            .insert((NeedsRigidBody(RigidBody::Static)))
+                            .insert((ColliderConstructor::TrimeshFromMesh, Geometry))
+                            .insert(CollisionLayers::new(
+                                CollisionMask::Environment,
+                                [CollisionMask::Projectile, CollisionMask::Ship],
+                            ));
                     }
                 }
             }
         }
         Level::Void => (),
     }
-    
+
     commands.set_state(LevelState::Loaded);
 }
 
@@ -192,20 +228,29 @@ fn postprocess_render_assets(
         let mut material_having_entity = Entity::PLACEHOLDER;
 
         for entity_ref in scene.world.iter_entities() {
-            if let Some(_) = scene.world.get::<MeshMaterial3d<StandardMaterial>>(entity_ref.id()) {
+            if let Some(_) = scene
+                .world
+                .get::<MeshMaterial3d<StandardMaterial>>(entity_ref.id())
+            {
                 material_having_entity = entity_ref.id();
             }
         }
 
         if material_having_entity != Entity::PLACEHOLDER {
-            scene.world.entity_mut(material_having_entity).remove::<MeshMaterial3d<StandardMaterial>>();
-            scene.world.entity_mut(material_having_entity).insert(MeshMaterial3d(gradient_materials.add(GradientMaterial {
-                axis: 2,
-                start_color: LinearRgba::new(0.0, 1.2, 0.0, 1.0),
-                end_color: WHITE.into(),
-                start: -0.5,
-                end: 1.0,
-            })));
+            scene
+                .world
+                .entity_mut(material_having_entity)
+                .remove::<MeshMaterial3d<StandardMaterial>>();
+            scene
+                .world
+                .entity_mut(material_having_entity)
+                .insert(MeshMaterial3d(gradient_materials.add(GradientMaterial {
+                    axis: 2,
+                    start_color: LinearRgba::new(0.0, 1.2, 0.0, 1.0),
+                    end_color: WHITE.into(),
+                    start: -0.5,
+                    end: 1.0,
+                })));
         }
     }
 }
