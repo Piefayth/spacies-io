@@ -67,13 +67,17 @@ fn open_system_menu(mut commands: Commands) {
                         });
 
                     #[cfg(not(target_family = "wasm"))]
-                    child_child_builder.spawn((
-                        Text::new("Exit"),
-                        TextFont {
-                            font_size: 30.,
-                            ..default()
-                        },
-                    ));
+                    child_child_builder
+                        .spawn((
+                            Text::new("Exit"),
+                            TextFont {
+                                font_size: 30.,
+                                ..default()
+                            },
+                        ))
+                        .observe(|_click: Trigger<Pointer<Click>>, mut commands: Commands| {
+                            commands.send_event(AppExit::default());
+                        });
                 });
         });
 }

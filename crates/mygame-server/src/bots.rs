@@ -1,8 +1,8 @@
 use avian3d::{math::TAU, prelude::{Position, Rotation}};
-use bevy::{ecs::entity::MapEntities, prelude::*, utils::HashMap};
+use bevy::{ecs::entity::MapEntities, platform::collections::HashMap, prelude::*};
 use bevy_rand::{global::GlobalEntropy, prelude::{Entropy, WyRand}, traits::ForkableRng};
 use leafwing_input_manager::prelude::ActionState;
-use lightyear::prelude::{server::{ControlledBy, Lifetime, SyncTarget}, NetworkTarget, ReplicateHierarchy, ServerReplicate, TickManager};
+use lightyear::prelude::{server::{ControlledBy, Lifetime, SyncTarget}, DisableReplicateHierarchy, NetworkTarget, ServerReplicate, TickManager};
 use mygame_common::REPLICATION_GROUP_PREDICTED;
 use mygame_protocol::{component::{Bot, Health, Ship}, input::NetworkedInput};
 use rand_core::RngCore;
@@ -24,7 +24,7 @@ struct BotAI {
 }
 
 const BOT_SPAWN_TICK_INTERVAL: u16 = 7;
-const MAX_BOTS: usize = 30;
+const MAX_BOTS: usize = 0;
 const SPAWN_RADIUS: f32 = 100.0;
 const CEILING_HEIGHT: f32 = 50.0;
 const TARGET_REACH_DISTANCE: f32 = 2.0;
@@ -76,12 +76,9 @@ fn spawn_bots(
             //     prediction: NetworkTarget::None,
             //     interpolation: NetworkTarget::All,
             // },
-            hierarchy: ReplicateHierarchy {
-                enabled: false,
-                ..default()
-            },
             ..default()
         },
+        DisableReplicateHierarchy,
         ActionState::<NetworkedInput>::default(),
     ));
 }

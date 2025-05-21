@@ -13,6 +13,7 @@ bevy.workspace = true
 serde.workspace = true
 leafwing-input-manager.workspace = true
 bevy-inspector-egui.workspace = true
+bevy_egui.workspace = true
 bevy_hanabi.workspace = true
 
 [lints]

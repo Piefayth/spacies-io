@@ -1,7 +1,7 @@
 use avian3d::{prelude::{NarrowPhaseConfig, PhysicsInterpolationPlugin, PhysicsLayer}, sync::SyncConfig, PhysicsPlugins};
 use bevy::prelude::*;
 use lightyear::{client::config::ClientConfig, prelude::{
-    client::{Confirmed, Interpolated, Predicted, VisualInterpolateStatus}, server::ReplicationTarget, PreSpawnedPlayerObject, ReplicationGroup
+    client::{Confirmed, Interpolated, Predicted, VisualInterpolateStatus}, server::ReplicateToClient, PreSpawned, ReplicationGroup
 }, server::config::ServerConfig};
 use mygame_assets::AssetPlugin;
 use mygame_protocol::ProtocolPlugin;
@@ -23,10 +23,10 @@ impl Plugin for CommonPlugin {
                 level::LevelPlugin,
                 ship::ShipPlugin,
             ))
-            // .insert_resource(NarrowPhaseConfig {
-            //     contact_tolerance: 0.1,
-            //     ..default()
-            // })
+            .insert_resource(NarrowPhaseConfig {
+                contact_tolerance: 0.1,
+                ..default()
+            })
             .insert_resource(SyncConfig {
                 transform_to_position: false,
                 position_to_transform: true,
@@ -42,7 +42,7 @@ pub struct LaunchConfigurations {
     pub client_remote_config: Option<ClientConfig>,
 }
 
-pub type Simulated = Or<(With<Predicted>, With<ReplicationTarget>, With<PreSpawnedPlayerObject>)>;
+pub type Simulated = Or<(With<Predicted>, With<ReplicateToClient>, With<PreSpawned>)>;
 pub type Rendered = Or<(Simulated, With<Interpolated>)>;
 
 pub const REPLICATION_GROUP_PREDICTED: ReplicationGroup = ReplicationGroup::new_id(42);

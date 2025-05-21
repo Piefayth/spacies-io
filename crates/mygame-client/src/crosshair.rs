@@ -21,16 +21,14 @@ impl Plugin for CrosshairPlugin {
     }
 }
 
-pub fn lock_mouse(mut primary_window: Query<&mut Window, With<PrimaryWindow>>) {
-    let window = &mut primary_window.single_mut();
-    window.cursor_options.grab_mode = CursorGrabMode::Confined;
-    window.cursor_options.visible = false;
+fn lock_mouse(mut primary_window: Single<&mut Window, With<PrimaryWindow>>) {
+    primary_window.cursor_options.grab_mode = CursorGrabMode::Confined;
+    primary_window.cursor_options.visible = false;
 }
 
-pub fn unlock_mouse(mut primary_window: Query<&mut Window, With<PrimaryWindow>>) {
-    let window = &mut primary_window.single_mut();
-    window.cursor_options.grab_mode = CursorGrabMode::None;
-    window.cursor_options.visible = true;
+fn unlock_mouse(mut primary_window: Single<&mut Window, With<PrimaryWindow>>) {
+    primary_window.cursor_options.grab_mode = CursorGrabMode::None;
+    primary_window.cursor_options.visible = true;
 }
 
 #[derive(Asset, TypePath, AsBindGroup, Debug, Clone)]
@@ -57,11 +55,9 @@ struct CrosshairFar;
 
 fn spawn_crosshair_camera(
     mut commands: Commands,
-    q_main_camera: Query<Entity, With<MainCamera>>,
+    main_camera: Single<Entity, With<MainCamera>>,
 ) {
-    let main_camera = q_main_camera.single();
-
-    commands.entity(main_camera).with_child((
+    commands.entity(*main_camera).with_child((
         Camera3d::default(),
         RenderLayers::layer(1),
         Camera {

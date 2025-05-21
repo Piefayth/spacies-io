@@ -43,7 +43,7 @@ fn build_core_client_app(
             ..default()
         }).set(LogPlugin {
             level: Level::INFO,
-            filter: "wgpu=error,bevy_render=info,bevy_ecs=info,offset_allocator=error,naga=warn,bevy_hanabi=debug".into(),
+            filter: "wgpu=error,bevy_render=info,bevy_ecs=info,offset_allocator=error,naga=warn,bevy_hanabi=error".into(),
             ..default()
         }),
         ClientPlugins {
@@ -62,7 +62,8 @@ fn build_core_client_app(
     ));
 
     app.insert_resource(AssetPath(asset_path));
-
+    app.enable_state_scoped_entities::<GameState>();
+    
     app
 }
 

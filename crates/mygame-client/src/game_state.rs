@@ -43,7 +43,6 @@ fn cleanup_on_exit_to_menu(
     >,
     mut client_manager: ResMut<ClientConnectionManager>,
 ) {
-    println!("sending request shutdown");
     // Irrelevant if this fails since we're disconnecting + closing the server
     let _ = client_manager
         .send_message::<Reliable, ClientHostRequestShutdown>(&ClientHostRequestShutdown);

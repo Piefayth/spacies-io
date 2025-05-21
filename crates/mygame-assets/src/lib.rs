@@ -197,8 +197,11 @@ fn postprocess_assets(
                         scene
                             .world
                             .entity_mut(entity)
-                            .insert((NeedsRigidBody(RigidBody::Static)))
-                            .insert((ColliderConstructor::TrimeshFromMesh, Geometry))
+                            .insert((
+                                NeedsRigidBody(RigidBody::Static),
+                                ColliderConstructor::ConvexDecompositionFromMesh, 
+                                Geometry
+                            ))
                             .insert(CollisionLayers::new(
                                 CollisionMask::Environment,
                                 [CollisionMask::Projectile, CollisionMask::Ship],

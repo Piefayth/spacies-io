@@ -1,5 +1,6 @@
 use avian3d::prelude::PhysicsDebugPlugin;
 use bevy::{color::palettes::css::WHITE, prelude::*};
+use bevy_egui::EguiPlugin;
 use bevy_hanabi::HanabiPlugin;
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
 
@@ -16,6 +17,7 @@ impl Plugin for RenderPlugin {
             camera::CameraPlugin,
             effects::FxPlugin,
             //PhysicsDebugPlugin::default(),
+            EguiPlugin { enable_multipass_for_primary_context: true },
             WorldInspectorPlugin::default(),
             HanabiPlugin,
         ));

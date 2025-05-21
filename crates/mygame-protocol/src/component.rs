@@ -24,7 +24,7 @@ pub struct Projectile {
 
 impl MapEntities for Projectile {
     fn map_entities<M: EntityMapper>(&mut self, entity_mapper: &mut M) {
-        self.owner = entity_mapper.map_entity(self.owner);
+        self.owner = entity_mapper.get_mapped(self.owner);
     }
 }
 

@@ -28,8 +28,14 @@ pub enum RespawnMenuState {
 #[derive(Component)]
 pub struct RespawnMenu;
 
-fn set_respawn_menu_state_open(trigger: Trigger<OnRemove, LocalPlayer>, mut commands: Commands) {
-    commands.set_state(RespawnMenuState::Open);
+fn set_respawn_menu_state_open(
+    trigger: Trigger<OnRemove, LocalPlayer>, 
+    mut commands: Commands,
+    game_state: Res<State<GameState>>,
+) {
+    if matches!(**game_state, GameState::Playing) {
+        commands.set_state(RespawnMenuState::Open);
+    }
 }
 
 fn set_respawn_menu_state_closed(trigger: Trigger<OnAdd, LocalPlayer>, mut commands: Commands) {
